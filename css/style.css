@@ -1,0 +1,195 @@
+/* === Reset & Base === */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+/* === Map Container === */
+#map {
+  height: 100%;
+  width: 100%;
+  background-color: #e8f5e9; /* Fallback while tiles load */
+}
+
+/* Override Leaflet attribution (keep it subtle) */
+.leaflet-control-attribution {
+  font-size: 9px !important;
+  opacity: 0.5;
+}
+
+/* === Distance Panel === */
+#distance-panel {
+  position: fixed;
+  bottom: 30px;
+  left: 20px;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 20px;
+  z-index: 1000;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(255, 183, 77, 0.5); /* Amber hint */
+  transition: transform 0.2s ease;
+}
+
+#distance-value {
+  font-size: 2em;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+#distance-unit {
+  font-size: 0.9em;
+  font-weight: 500;
+  opacity: 0.8;
+  margin-right: 6px;
+}
+
+#distance-label {
+  font-size: 0.7em;
+  font-weight: 400;
+  opacity: 0.6;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* === Wake Lock Indicator === */
+#wakelock-indicator {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 36px;
+  height: 36px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+#wakelock-indicator.active {
+  opacity: 0.8;
+}
+
+#wakelock-indicator.pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(255, 215, 0, 0); }
+}
+
+/* === Status Bar === */
+#status-bar {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.8em;
+  z-index: 999;
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: none;
+  white-space: nowrap;
+  max-width: 90%;
+  text-align: center;
+}
+
+#status-bar.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+#status-bar.hidden {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-10px);
+}
+
+/* === Responsive Adjustments === */
+@media (max-width: 400px) {
+  #distance-panel {
+    bottom: 20px;
+    left: 12px;
+    padding: 10px 16px;
+  }
+  
+  #distance-value {
+    font-size: 1.6em;
+  }
+}
+
+/* === Leaflet Overrides for Cartoon Feel === */
+.leaflet-container {
+  font-family: inherit;
+}
+
+/* Make zoom controls more game-like */
+.leaflet-control-zoom {
+  border: 2px solid rgba(0, 0, 0, 0.2) !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+}
+
+.leaflet-control-zoom a {
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: #333 !important;
+  width: 34px !important;
+  height: 34px !important;
+  line-height: 34px !important;
+  font-size: 18px !important;
+}
+
+/* === Orientation Lock Message === */
+@media screen and (orientation: landscape) and (max-width: 900px) {
+  #map::after {
+    content: "Please rotate your device to portrait mode";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    font-size: 1.2em;
+    padding: 20px;
+    text-align: center;
+  }
+}
