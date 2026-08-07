@@ -1,4 +1,4 @@
-// app.js - Main application controller
+// app.js - Main application controller (with debug overlay)
 
 // Game state
 let totalDistanceToday = 0;
@@ -6,18 +6,30 @@ let lastSaveTime = 0;
 let wakeLock = null;
 let wakeLockSupported = false;
 let initialPositionSet = false;
+let updateCount = 0;  // debug: count position updates
+let lastDebugMsgTime = 0;
 
 // Save interval (milliseconds)
 const SAVE_INTERVAL = 5000; // Save state every 5 seconds
 
 /**
+ * Global error handler - shows JS errors in status bar
+ */
+window.onerror = function(message, source, lineno, colno, error) {
+  console.error('Global error:', message, 'at', source, lineno);
+  showError('JS Error: ' + message);
+  return true; // prevents default browser error
+};
+
+/**
  * Initialise the application
  */
 async function initApp() {
-  console.log('[App] Starting Dino Walk...');
+  console.log('[App] Starting Dino Walk (debug mode)...');
   
   // Initialise UI elements
   initUI();
+  initDebugPanel();
   
   // Open database
   try {
@@ -40,12 +52,48 @@ async function initApp() {
     console.log('[App] Wake Lock not supported');
   }
   
-  // Set up geolocation callbacks
+  // Set up geolocation callbacks BEFORE getting initial position
+  // This guarantees the callbacks exist when startTracking runs
   onPositionUpdateCallback = handlePositionUpdate;
   onErrorCallback = handleGeoError;
+  console.log('[App] Geolocation callbacks registered');
   
   // Get initial position to set up the map
   getInitialPosition();
+}
+
+/**
+ * Create a small debug panel
+ */
+function initDebugPanel() {
+  const debugDiv = document.createElement('div');
+  debugDiv.id = 'debug-panel';
+  debugDiv.style.cssText = `
+    position: fixed;
+    bottom: 30px;
+    right: 20px;
+    background: rgba(0,0,0,0.75);
+    color: #0f0;
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-family: monospace;
+    font-size: 11px;
+    z-index: 2000;
+    pointer-events: none;
+    line-height: 1.4;
+  `;
+  debugDiv.innerHTML = 'Updates: 0<br>Last dist: -- m';
+  document.body.appendChild(debugDiv);
+}
+
+/**
+ * Update debug panel
+ */
+function updateDebugPanel(distance) {
+  const panel = document.getElementById('debug-panel');
+  if (panel) {
+    panel.innerHTML = `Updates: ${updateCount}<br>Last dist: ${distance.toFixed(2)} m`;
+  }
 }
 
 /**
@@ -56,9 +104,10 @@ function getInitialPosition() {
   
   navigator.geolocation.getCurrentPosition(
     (position) => {
-      const { latitude, longitude } = position.coords;
+      const { latitude, longitude, accuracy } = position.coords;
       
-      console.log('[App] Initial position:', latitude, longitude);
+      console.log('[App] Initial position:', latitude, longitude, 'accuracy:', accuracy);
+      showStatus('Location acquired, starting tracking...', 2000);
       
       // Initialise the map
       initMap(latitude, longitude);
@@ -68,8 +117,13 @@ function getInitialPosition() {
         restoreTrail(gameState.trailPoints);
       }
       
-      // Start tracking
-      startTracking();
+      // Start tracking (callbacks are already set)
+      const trackingStarted = startTracking();
+      console.log('[App] Tracking started:', trackingStarted);
+      
+      if (!trackingStarted) {
+        showError('Could not start position tracking');
+      }
       
       // Update display
       updateDistanceDisplay(totalDistanceToday);
@@ -77,11 +131,11 @@ function getInitialPosition() {
       // Set initial position flag
       initialPositionSet = true;
       
-      showStatus('Ready to walk! 🦕', 3000);
+      showStatus('Ready to walk! 🦕 (Updates: watch status bar)', 4000);
     },
     (error) => {
       console.error('[App] Failed to get initial position:', error);
-      showError('Could not get your location. Please check GPS and permissions.');
+      showError('Could not get your location. Check GPS and permissions.');
     },
     {
       enableHighAccuracy: true,
@@ -97,26 +151,33 @@ function getInitialPosition() {
 let gameState = null;
 
 function handlePositionUpdate(data) {
-  const { latitude, longitude, heading, distance, accuracy } = data;
+  const { latitude, longitude, heading, distance, accuracy, timestamp } = data;
+  
+  updateCount++;
+  
+  // Show a debug status message (throttled to every 2 seconds max)
+  const now = Date.now();
+  if (now - lastDebugMsgTime > 2000) {
+    showStatus(`📍 Update #${updateCount} | dist: ${distance.toFixed(1)}m | acc: ${Math.round(accuracy)}m`, 2000);
+    lastDebugMsgTime = now;
+  }
+  
+  // Update debug panel
+  updateDebugPanel(distance);
   
   // Update total distance for today
   if (distance > 0) {
     totalDistanceToday += distance;
     updateDistanceDisplay(totalDistanceToday);
+    console.log(`[App] Distance added: ${distance.toFixed(2)}m, total: ${totalDistanceToday.toFixed(2)}m`);
   }
   
-  // Update map
+  // Update map (arrow position and trail)
   if (initialPositionSet) {
     updateUserPosition(latitude, longitude, heading);
   }
   
-  // Update GPS accuracy display periodically
-  if (Math.random() < 0.1) { // ~10% chance each update
-    showGPSAccuracy(accuracy);
-  }
-  
   // Save state periodically
-  const now = Date.now();
   if (now - lastSaveTime > SAVE_INTERVAL) {
     saveCurrentState();
     lastSaveTime = now;
@@ -127,7 +188,8 @@ function handlePositionUpdate(data) {
  * Handle geolocation errors
  */
 function handleGeoError(message) {
-  showError(message);
+  showError('Geo Error: ' + message);
+  console.error('[App] Geo error:', message);
 }
 
 /**
@@ -160,7 +222,6 @@ async function loadSavedState() {
     if (isNewDay(gameState.lastDate)) {
       console.log('[App] New day detected, resetting distance');
       totalDistanceToday = 0;
-      // Keep trailPoints for Stage 2 (amber discovery)
     } else {
       totalDistanceToday = gameState.totalDistanceToday || 0;
       console.log('[App] Loaded state:', Math.round(totalDistanceToday), 'm');
