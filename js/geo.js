@@ -1,9 +1,9 @@
-// geo.js - Geolocation tracking and distance calculation (FIXED)
+// geo.js - Geolocation tracking and distance calculation
 
 // Constants
 const EARTH_RADIUS_METRES = 6371000;
-const MIN_DISTANCE_THRESHOLD = 1.0;  // Raised from 0.5m to 1m to reduce GPS jitter
-const MAX_JUMP_THRESHOLD = 100;      // Raised from 50m to 100m
+const MIN_DISTANCE_THRESHOLD = 1.0;  // Ignore movements smaller than 1m
+const MAX_JUMP_THRESHOLD = 100;      // Ignore GPS jumps larger than 100m
 
 // State
 let watchId = null;
@@ -28,8 +28,8 @@ function startTracking() {
   trackingActive = true;
 
   watchId = navigator.geolocation.watchPosition(
-    geoWatchSuccess,    // <-- renamed for clarity
-    geoWatchError,       // <-- renamed for clarity
+    geoWatchSuccess,
+    geoWatchError,
     {
       enableHighAccuracy: true,
       maximumAge: 2000,
@@ -56,38 +56,26 @@ function stopTracking() {
  * Geolocation watchPosition success handler
  */
 function geoWatchSuccess(position) {
-  // CRITICAL: Check that we actually got a position object with coords
+  // Validate we received a proper position object
   if (!position || !position.coords) {
-    console.error('[Geo] Received invalid position object:', position);
+    console.error('[Geo] Received invalid position object');
     return;
   }
   
   const coords = position.coords;
   
-  // Log the ENTIRE coords object to see what Chrome is actually giving us
-  console.log('[Geo] Full coords object:', JSON.stringify(coords));
-  
-  // Extract values directly - these ARE the Geolocation API property names
+  // Extract values
   const latitude = coords.latitude;
   const longitude = coords.longitude;
   const accuracy = coords.accuracy;
   const heading = coords.heading;    // May be null/undefined
   const speed = coords.speed;        // May be null/undefined
-  const altitude = coords.altitude;  // May be null/undefined
   
   // Validate we have the essentials
   if (latitude == null || longitude == null) {
-    console.error('[Geo] Missing latitude/longitude in coords:', coords);
+    console.error('[Geo] Missing latitude/longitude in coords');
     return;
   }
-  
-  console.log('[Geo] Position:', 
-    'lat=' + latitude.toFixed(6), 
-    'lng=' + longitude.toFixed(6), 
-    'acc=' + (accuracy != null ? accuracy.toFixed(1) : 'null'),
-    'head=' + (heading != null ? heading.toFixed(1) : 'null'),
-    'spd=' + (speed != null ? speed.toFixed(2) : 'null')
-  );
   
   // Calculate heading from movement if device doesn't provide it
   let finalHeading = heading;
@@ -99,6 +87,8 @@ function geoWatchSuccess(position) {
       longitude
     );
   }
+  
+  // Default heading to 0 (North) if still unknown
   if (finalHeading == null) {
     finalHeading = 0;
   }
@@ -120,8 +110,7 @@ function geoWatchSuccess(position) {
       distance = 0;
     } else if (distance > MAX_JUMP_THRESHOLD) {
       // GPS glitch - probably a bad position fix
-      console.warn('[Geo] Ignoring large jump of ' + distance.toFixed(1) + 'm');
-      // Don't update lastPosition so the next good fix will calculate from the last known good position
+      // Don't update lastPosition so the next good fix will calculate correctly
       return;
     }
   }
@@ -144,13 +133,6 @@ function geoWatchSuccess(position) {
     timestamp: position.timestamp
   };
   
-  console.log('[Geo] Sending to callback:', 
-    'lat=' + positionData.latitude.toFixed(6),
-    'lng=' + positionData.longitude.toFixed(6),
-    'dist=' + positionData.distance.toFixed(2),
-    'acc=' + positionData.accuracy
-  );
-  
   // Call the callback if it exists
   if (onPositionUpdateCallback) {
     onPositionUpdateCallback(positionData);
@@ -168,16 +150,16 @@ function geoWatchError(error) {
   let message = 'Location error';
   switch (error.code) {
     case error.PERMISSION_DENIED:
-      message = 'Location permission denied.';
+      message = 'Location permission denied. Please enable location access.';
       break;
     case error.POSITION_UNAVAILABLE:
-      message = 'Location unavailable. Check GPS.';
+      message = 'Location unavailable. Check your GPS signal.';
       break;
     case error.TIMEOUT:
-      message = 'Location timeout. Retrying...';
+      message = 'Location request timed out. Trying again...';
       break;
     default:
-      message = 'Location error code: ' + error.code;
+      message = 'Location error (code: ' + error.code + ')';
   }
   
   if (onErrorCallback) {
@@ -218,14 +200,23 @@ function calculateBearing(lat1, lon1, lat2, lon2) {
   return (bearing + 360) % 360;
 }
 
+/**
+ * Convert degrees to radians
+ */
 function toRadians(degrees) {
   return degrees * (Math.PI / 180);
 }
 
+/**
+ * Convert radians to degrees
+ */
 function toDegrees(radians) {
   return radians * (180 / Math.PI);
 }
 
+/**
+ * Check if tracking is currently active
+ */
 function isTracking() {
   return trackingActive;
 }

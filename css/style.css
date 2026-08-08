@@ -27,10 +27,10 @@ html, body {
 
 .leaflet-control-attribution {
   font-size: 9px !important;
-  opacity: 0.5;
+  opacity: 0.4;
 }
 
-/* === Distance Panel === */
+/* === Distance Panel (bottom left) === */
 #distance-panel {
   position: fixed;
   bottom: 30px;
@@ -72,62 +72,103 @@ html, body {
   letter-spacing: 0.5px;
 }
 
-/* === Wake Lock Indicator === */
-#wakelock-indicator {
+/* === Toast Notification === */
+#toast {
   position: fixed;
   top: 20px;
-  right: 20px;
-  width: 36px;
-  height: 36px;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  z-index: 998; /* Lower than status bar */
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-}
-
-#wakelock-indicator.active {
-  opacity: 0.8;
-}
-
-#wakelock-indicator.pulse {
-  animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.4); }
-  50% { box-shadow: 0 0 0 8px rgba(255, 215, 0, 0); }
-}
-
-/* === Status Bar (Fixed - now readable, below wake lock) === */
-#status-bar {
-  position: fixed;
-  top: 70px; /* Moved down to avoid sun icon */
-  left: 10px;
-  right: 10px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-120px);
   background: rgba(0, 0, 0, 0.85);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   color: #fff;
-  padding: 10px 14px;
+  padding: 12px 20px;
+  border-radius: 25px;
+  font-size: 0.85em;
+  z-index: 2000;
+  text-align: center;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  pointer-events: none;
+  max-width: 90%;
+}
+
+#toast.show {
+  transform: translateX(-50%) translateY(0);
+}
+
+#toast .toast-icon {
+  margin-right: 6px;
+}
+
+/* === Add to Home Screen Prompt === */
+#pwa-prompt {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(27, 94, 32, 0.95);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #fff;
+  padding: 16px 20px;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.9em;
+  transform: translateY(100%);
+  transition: transform 0.4s ease;
+  box-shadow: 0 -2px 20px rgba(0, 0, 0, 0.3);
+}
+
+#pwa-prompt.show {
+  transform: translateY(0);
+}
+
+#pwa-prompt-text {
+  flex: 1;
+  line-height: 1.4;
+}
+
+#pwa-prompt-close {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.85em;
+  cursor: pointer;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#pwa-prompt-close:active {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* === Status Bar (subtle, only for errors now) === */
+#status-bar {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  right: 20px;
+  background: rgba(180, 30, 30, 0.9);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #fff;
+  padding: 12px 16px;
   border-radius: 12px;
-  font-size: 0.8em;
-  z-index: 999;
+  font-size: 0.85em;
+  z-index: 1500;
   opacity: 0;
   transition: opacity 0.3s ease;
   pointer-events: none;
   word-wrap: break-word;
   line-height: 1.4;
-  max-height: 120px;
-  overflow-y: auto;
-  text-align: left;
+  text-align: center;
 }
 
 #status-bar.visible {
@@ -138,32 +179,13 @@ html, body {
   opacity: 0;
 }
 
-/* Error variant */
-#status-bar.error {
-  background: rgba(180, 30, 30, 0.9);
-  color: #fff;
-  font-weight: 500;
-  z-index: 1001; /* Above everything */
-  top: 10px; /* Move to very top for errors */
+/* === User Arrow Marker === */
+.user-arrow-marker {
+  background: transparent !important;
+  border: none !important;
 }
 
-/* === Debug Panel === */
-#debug-panel {
-  position: fixed;
-  bottom: 30px;
-  right: 20px;
-  background: rgba(0, 0, 0, 0.75);
-  color: #0f0;
-  padding: 8px 12px;
-  border-radius: 12px;
-  font-family: monospace;
-  font-size: 11px;
-  z-index: 2000;
-  pointer-events: none;
-  line-height: 1.4;
-}
-
-/* === Responsive Adjustments === */
+/* === Responsive === */
 @media (max-width: 400px) {
   #distance-panel {
     bottom: 20px;
@@ -196,10 +218,10 @@ html, body {
   font-size: 18px !important;
 }
 
-/* === Orientation Lock Message === */
+/* === Landscape warning === */
 @media screen and (orientation: landscape) and (max-width: 900px) {
   #map::after {
-    content: "Please rotate your device to portrait mode";
+    content: "Please rotate to portrait mode";
     position: absolute;
     top: 0;
     left: 0;
