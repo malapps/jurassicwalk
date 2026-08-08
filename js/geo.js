@@ -1,9 +1,9 @@
-// geo.js - Geolocation tracking and distance calculation (debug mode)
+// geo.js - Geolocation tracking and distance calculation (FIXED)
 
 // Constants
 const EARTH_RADIUS_METRES = 6371000;
-const MIN_DISTANCE_THRESHOLD = 0.5;
-const MAX_JUMP_THRESHOLD = 50;
+const MIN_DISTANCE_THRESHOLD = 1.0;  // Raised from 0.5m to 1m to reduce GPS jitter
+const MAX_JUMP_THRESHOLD = 100;      // Raised from 50m to 100m
 
 // State
 let watchId = null;
@@ -28,8 +28,8 @@ function startTracking() {
   trackingActive = true;
 
   watchId = navigator.geolocation.watchPosition(
-    handlePositionUpdate,
-    handlePositionError,
+    geoWatchSuccess,    // <-- renamed for clarity
+    geoWatchError,       // <-- renamed for clarity
     {
       enableHighAccuracy: true,
       maximumAge: 2000,
@@ -53,49 +53,54 @@ function stopTracking() {
 }
 
 /**
- * Handle position updates - DEBUG: log raw position object
+ * Geolocation watchPosition success handler
  */
-function handlePositionUpdate(position) {
-  // Log the raw position object to console (visible via remote debugging)
-  console.log('[Geo] Raw position object:', JSON.stringify({
-    timestamp: position.timestamp,
-    coords: {
-      latitude: position.coords.latitude,
-      longitude: position.coords.longitude,
-      altitude: position.coords.altitude,
-      accuracy: position.coords.accuracy,
-      altitudeAccuracy: position.coords.altitudeAccuracy,
-      heading: position.coords.heading,
-      speed: position.coords.speed
-    }
-  }, null, 2));
+function geoWatchSuccess(position) {
+  // CRITICAL: Check that we actually got a position object with coords
+  if (!position || !position.coords) {
+    console.error('[Geo] Received invalid position object:', position);
+    return;
+  }
   
   const coords = position.coords;
-  const timestamp = position.timestamp;
   
-  // Extract values with fallbacks
+  // Log the ENTIRE coords object to see what Chrome is actually giving us
+  console.log('[Geo] Full coords object:', JSON.stringify(coords));
+  
+  // Extract values directly - these ARE the Geolocation API property names
   const latitude = coords.latitude;
   const longitude = coords.longitude;
-  const accuracy = coords.accuracy; // metres
-  let heading = coords.heading;     // degrees, may be null
-  const speed = coords.speed;       // m/s, may be null
+  const accuracy = coords.accuracy;
+  const heading = coords.heading;    // May be null/undefined
+  const speed = coords.speed;        // May be null/undefined
+  const altitude = coords.altitude;  // May be null/undefined
   
-  console.log('[Geo] Parsed coords:', { latitude, longitude, accuracy, heading, speed });
+  // Validate we have the essentials
+  if (latitude == null || longitude == null) {
+    console.error('[Geo] Missing latitude/longitude in coords:', coords);
+    return;
+  }
+  
+  console.log('[Geo] Position:', 
+    'lat=' + latitude.toFixed(6), 
+    'lng=' + longitude.toFixed(6), 
+    'acc=' + (accuracy != null ? accuracy.toFixed(1) : 'null'),
+    'head=' + (heading != null ? heading.toFixed(1) : 'null'),
+    'spd=' + (speed != null ? speed.toFixed(2) : 'null')
+  );
   
   // Calculate heading from movement if device doesn't provide it
-  if ((heading === null || heading === undefined) && lastPosition) {
-    heading = calculateBearing(
+  let finalHeading = heading;
+  if ((finalHeading == null) && lastPosition) {
+    finalHeading = calculateBearing(
       lastPosition.latitude,
       lastPosition.longitude,
       latitude,
       longitude
     );
-    console.log('[Geo] Calculated heading from movement:', heading);
   }
-  
-  // Default heading to 0 (North) if still unknown
-  if (heading === null || heading === undefined) {
-    heading = 0;
+  if (finalHeading == null) {
+    finalHeading = 0;
   }
   
   // Calculate distance from last position
@@ -108,69 +113,76 @@ function handlePositionUpdate(position) {
       longitude
     );
     
-    console.log('[Geo] Raw distance calculated:', distance.toFixed(4), 'm');
-    
-    // Filter out unrealistic jumps
+    // Filter out unrealistic values
     if (distance < MIN_DISTANCE_THRESHOLD) {
-      console.log('[Geo] Distance below threshold (' + MIN_DISTANCE_THRESHOLD + 'm), ignoring');
+      // GPS jitter - position changed but by less than 1 metre
+      // We still update the map position but don't count the distance
       distance = 0;
     } else if (distance > MAX_JUMP_THRESHOLD) {
-      console.warn('[Geo] Large jump detected (' + distance.toFixed(1) + 'm), ignoring');
-      distance = 0;
+      // GPS glitch - probably a bad position fix
+      console.warn('[Geo] Ignoring large jump of ' + distance.toFixed(1) + 'm');
+      // Don't update lastPosition so the next good fix will calculate from the last known good position
+      return;
     }
-  } else {
-    console.log('[Geo] First position fix, no distance calculated');
   }
   
   // Update last position
   lastPosition = {
     latitude: latitude,
     longitude: longitude,
-    timestamp: timestamp
+    timestamp: position.timestamp
   };
   
-  console.log('[Geo] Calling onPositionUpdateCallback with:', {
-    latitude, longitude, heading, speed, distance, accuracy, timestamp
-  });
+  // Build the data object to send to the callback
+  const positionData = {
+    latitude: latitude,
+    longitude: longitude,
+    heading: finalHeading,
+    speed: speed || 0,
+    distance: distance,
+    accuracy: accuracy || 0,
+    timestamp: position.timestamp
+  };
   
-  // Call the callback
+  console.log('[Geo] Sending to callback:', 
+    'lat=' + positionData.latitude.toFixed(6),
+    'lng=' + positionData.longitude.toFixed(6),
+    'dist=' + positionData.distance.toFixed(2),
+    'acc=' + positionData.accuracy
+  );
+  
+  // Call the callback if it exists
   if (onPositionUpdateCallback) {
-    onPositionUpdateCallback({
-      latitude: latitude,
-      longitude: longitude,
-      heading: heading,
-      speed: speed,
-      distance: distance,
-      accuracy: accuracy,
-      timestamp: timestamp
-    });
+    onPositionUpdateCallback(positionData);
   } else {
-    console.error('[Geo] No onPositionUpdateCallback set!');
+    console.error('[Geo] No onPositionUpdateCallback set! Updates are being lost!');
   }
 }
 
 /**
- * Handle position errors
+ * Geolocation watchPosition error handler
  */
-function handlePositionError(error) {
-  console.error('[Geo] Position error code:', error.code, 'message:', error.message);
+function geoWatchError(error) {
+  console.error('[Geo] Watch error - code:', error.code, 'message:', error.message);
   
   let message = 'Location error';
   switch (error.code) {
     case error.PERMISSION_DENIED:
-      message = 'Location permission denied. Please enable location access.';
+      message = 'Location permission denied.';
       break;
     case error.POSITION_UNAVAILABLE:
-      message = 'Location unavailable. Check your GPS signal.';
+      message = 'Location unavailable. Check GPS.';
       break;
     case error.TIMEOUT:
-      message = 'Location request timed out. Trying again...';
+      message = 'Location timeout. Retrying...';
       break;
     default:
-      message = 'Unknown location error (code: ' + error.code + ')';
+      message = 'Location error code: ' + error.code;
   }
   
-  if (onErrorCallback) onErrorCallback(message);
+  if (onErrorCallback) {
+    onErrorCallback(message);
+  }
 }
 
 /**
@@ -206,23 +218,14 @@ function calculateBearing(lat1, lon1, lat2, lon2) {
   return (bearing + 360) % 360;
 }
 
-/**
- * Convert degrees to radians
- */
 function toRadians(degrees) {
   return degrees * (Math.PI / 180);
 }
 
-/**
- * Convert radians to degrees
- */
 function toDegrees(radians) {
   return radians * (180 / Math.PI);
 }
 
-/**
- * Check if tracking is currently active
- */
 function isTracking() {
   return trackingActive;
 }
