@@ -1,4 +1,4 @@
-// app.js - Main application controller (with debug overlay)
+// app.js - Main application controller (debug mode, fixed)
 
 // Game state
 let totalDistanceToday = 0;
@@ -6,19 +6,21 @@ let lastSaveTime = 0;
 let wakeLock = null;
 let wakeLockSupported = false;
 let initialPositionSet = false;
-let updateCount = 0;  // debug: count position updates
+let updateCount = 0;
 let lastDebugMsgTime = 0;
 
 // Save interval (milliseconds)
-const SAVE_INTERVAL = 5000; // Save state every 5 seconds
+const SAVE_INTERVAL = 5000;
 
 /**
- * Global error handler - shows JS errors in status bar
+ * Global error handler
  */
 window.onerror = function(message, source, lineno, colno, error) {
   console.error('Global error:', message, 'at', source, lineno);
-  showError('JS Error: ' + message);
-  return true; // prevents default browser error
+  if (typeof showError === 'function') {
+    showError('JS Error: ' + message);
+  }
+  return true;
 };
 
 /**
@@ -53,7 +55,6 @@ async function initApp() {
   }
   
   // Set up geolocation callbacks BEFORE getting initial position
-  // This guarantees the callbacks exist when startTracking runs
   onPositionUpdateCallback = handlePositionUpdate;
   onErrorCallback = handleGeoError;
   console.log('[App] Geolocation callbacks registered');
@@ -87,12 +88,15 @@ function initDebugPanel() {
 }
 
 /**
- * Update debug panel
+ * Update debug panel - FIXED: handle undefined/null distance
  */
 function updateDebugPanel(distance) {
   const panel = document.getElementById('debug-panel');
   if (panel) {
-    panel.innerHTML = `Updates: ${updateCount}<br>Last dist: ${distance.toFixed(2)} m`;
+    const distStr = (distance != null && !isNaN(distance)) 
+      ? distance.toFixed(2) + ' m' 
+      : '-- m';
+    panel.innerHTML = `Updates: ${updateCount}<br>Last dist: ${distStr}`;
   }
 }
 
@@ -131,7 +135,7 @@ function getInitialPosition() {
       // Set initial position flag
       initialPositionSet = true;
       
-      showStatus('Ready to walk! 🦕 (Updates: watch status bar)', 4000);
+      showStatus('Ready to walk! 🦕', 4000);
     },
     (error) => {
       console.error('[App] Failed to get initial position:', error);
@@ -151,6 +155,12 @@ function getInitialPosition() {
 let gameState = null;
 
 function handlePositionUpdate(data) {
+  // Safety check - if data is undefined, return early
+  if (!data) {
+    console.warn('[App] handlePositionUpdate called with no data');
+    return;
+  }
+  
   const { latitude, longitude, heading, distance, accuracy, timestamp } = data;
   
   updateCount++;
@@ -158,23 +168,25 @@ function handlePositionUpdate(data) {
   // Show a debug status message (throttled to every 2 seconds max)
   const now = Date.now();
   if (now - lastDebugMsgTime > 2000) {
-    showStatus(`📍 Update #${updateCount} | dist: ${distance.toFixed(1)}m | acc: ${Math.round(accuracy)}m`, 2000);
+    const distStr = (distance != null) ? distance.toFixed(1) : '0.0';
+    const accStr = (accuracy != null) ? Math.round(accuracy) : '?';
+    showStatus(`📍 Update #${updateCount} | dist: ${distStr}m | acc: ${accStr}m`, 2000);
     lastDebugMsgTime = now;
   }
   
-  // Update debug panel
-  updateDebugPanel(distance);
+  // Update debug panel - FIXED: pass distance safely
+  updateDebugPanel(distance || 0);
   
   // Update total distance for today
-  if (distance > 0) {
+  if (distance && distance > 0) {
     totalDistanceToday += distance;
     updateDistanceDisplay(totalDistanceToday);
     console.log(`[App] Distance added: ${distance.toFixed(2)}m, total: ${totalDistanceToday.toFixed(2)}m`);
   }
   
   // Update map (arrow position and trail)
-  if (initialPositionSet) {
-    updateUserPosition(latitude, longitude, heading);
+  if (initialPositionSet && latitude != null && longitude != null) {
+    updateUserPosition(latitude, longitude, heading || 0);
   }
   
   // Save state periodically
@@ -188,7 +200,9 @@ function handlePositionUpdate(data) {
  * Handle geolocation errors
  */
 function handleGeoError(message) {
-  showError('Geo Error: ' + message);
+  if (typeof showError === 'function') {
+    showError('Geo Error: ' + message);
+  }
   console.error('[App] Geo error:', message);
 }
 
@@ -218,7 +232,6 @@ async function loadSavedState() {
   try {
     gameState = await loadGameState();
     
-    // Check if it's a new day
     if (isNewDay(gameState.lastDate)) {
       console.log('[App] New day detected, resetting distance');
       totalDistanceToday = 0;
@@ -241,21 +254,25 @@ async function requestWakeLock() {
   try {
     wakeLock = await navigator.wakeLock.request('screen');
     console.log('[App] Wake Lock acquired');
-    showWakeLockIndicator();
+    if (typeof showWakeLockIndicator === 'function') {
+      showWakeLockIndicator();
+    }
     
-    // Handle Wake Lock release
     wakeLock.addEventListener('release', () => {
       console.log('[App] Wake Lock released');
-      hideWakeLockIndicator();
+      if (typeof hideWakeLockIndicator === 'function') {
+        hideWakeLockIndicator();
+      }
       
-      // Try to re-acquire if the page is still visible
       if (document.visibilityState === 'visible') {
         setTimeout(() => requestWakeLock(), 1000);
       }
     });
   } catch (error) {
     console.warn('[App] Wake Lock request failed:', error);
-    hideWakeLockIndicator();
+    if (typeof hideWakeLockIndicator === 'function') {
+      hideWakeLockIndicator();
+    }
   }
 }
 
@@ -282,7 +299,7 @@ window.addEventListener('beforeunload', () => {
 });
 
 /**
- * Save state when the page is hidden (app goes to background)
+ * Save state when the page is hidden
  */
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') {
