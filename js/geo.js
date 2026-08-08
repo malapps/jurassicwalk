@@ -1,9 +1,9 @@
-// geo.js - Geolocation tracking and distance calculation
+// geo.js - Geolocation tracking and distance calculation (debug mode)
 
 // Constants
 const EARTH_RADIUS_METRES = 6371000;
-const MIN_DISTANCE_THRESHOLD = 0.5; // Ignore GPS jumps smaller than 0.5m
-const MAX_JUMP_THRESHOLD = 50; // Ignore GPS jumps larger than 50m (probably errors)
+const MIN_DISTANCE_THRESHOLD = 0.5;
+const MAX_JUMP_THRESHOLD = 50;
 
 // State
 let watchId = null;
@@ -32,8 +32,8 @@ function startTracking() {
     handlePositionError,
     {
       enableHighAccuracy: true,
-      maximumAge: 2000,        // Accept positions up to 2 seconds old
-      timeout: 15000           // Timeout after 15 seconds
+      maximumAge: 2000,
+      timeout: 15000
     }
   );
 
@@ -53,27 +53,48 @@ function stopTracking() {
 }
 
 /**
- * Handle position updates
+ * Handle position updates - DEBUG: log raw position object
  */
 function handlePositionUpdate(position) {
+  // Log the raw position object to console (visible via remote debugging)
+  console.log('[Geo] Raw position object:', JSON.stringify({
+    timestamp: position.timestamp,
+    coords: {
+      latitude: position.coords.latitude,
+      longitude: position.coords.longitude,
+      altitude: position.coords.altitude,
+      accuracy: position.coords.accuracy,
+      altitudeAccuracy: position.coords.altitudeAccuracy,
+      heading: position.coords.heading,
+      speed: position.coords.speed
+    }
+  }, null, 2));
+  
   const coords = position.coords;
   const timestamp = position.timestamp;
   
-  let heading = coords.heading; // May be null
-  const speed = coords.speed;   // m/s, may be null
+  // Extract values with fallbacks
+  const latitude = coords.latitude;
+  const longitude = coords.longitude;
+  const accuracy = coords.accuracy; // metres
+  let heading = coords.heading;     // degrees, may be null
+  const speed = coords.speed;       // m/s, may be null
+  
+  console.log('[Geo] Parsed coords:', { latitude, longitude, accuracy, heading, speed });
   
   // Calculate heading from movement if device doesn't provide it
-  if (heading === null && lastPosition) {
+  if ((heading === null || heading === undefined) && lastPosition) {
     heading = calculateBearing(
       lastPosition.latitude,
       lastPosition.longitude,
-      coords.latitude,
-      coords.longitude
+      latitude,
+      longitude
     );
+    console.log('[Geo] Calculated heading from movement:', heading);
   }
   
   // Default heading to 0 (North) if still unknown
-  if (heading === null) {
+  if (heading === null || heading === undefined) {
     heading = 0;
   }
   
@@ -83,37 +104,48 @@ function handlePositionUpdate(position) {
     distance = haversineDistance(
       lastPosition.latitude,
       lastPosition.longitude,
-      coords.latitude,
-      coords.longitude
+      latitude,
+      longitude
     );
+    
+    console.log('[Geo] Raw distance calculated:', distance.toFixed(4), 'm');
     
     // Filter out unrealistic jumps
     if (distance < MIN_DISTANCE_THRESHOLD) {
-      distance = 0; // Too small, probably GPS drift
+      console.log('[Geo] Distance below threshold (' + MIN_DISTANCE_THRESHOLD + 'm), ignoring');
+      distance = 0;
     } else if (distance > MAX_JUMP_THRESHOLD) {
-      console.warn('[Geo] Large jump detected, ignoring:', distance.toFixed(1) + 'm');
-      distance = 0; // Probably a GPS error
+      console.warn('[Geo] Large jump detected (' + distance.toFixed(1) + 'm), ignoring');
+      distance = 0;
     }
+  } else {
+    console.log('[Geo] First position fix, no distance calculated');
   }
   
   // Update last position
   lastPosition = {
-    latitude: coords.latitude,
-    longitude: coords.longitude,
+    latitude: latitude,
+    longitude: longitude,
     timestamp: timestamp
   };
+  
+  console.log('[Geo] Calling onPositionUpdateCallback with:', {
+    latitude, longitude, heading, speed, distance, accuracy, timestamp
+  });
   
   // Call the callback
   if (onPositionUpdateCallback) {
     onPositionUpdateCallback({
-      latitude: coords.latitude,
-      longitude: coords.longitude,
+      latitude: latitude,
+      longitude: longitude,
       heading: heading,
       speed: speed,
       distance: distance,
-      accuracy: coords.accuracy,
+      accuracy: accuracy,
       timestamp: timestamp
     });
+  } else {
+    console.error('[Geo] No onPositionUpdateCallback set!');
   }
 }
 
@@ -121,7 +153,7 @@ function handlePositionUpdate(position) {
  * Handle position errors
  */
 function handlePositionError(error) {
-  console.error('[Geo] Position error:', error.code, error.message);
+  console.error('[Geo] Position error code:', error.code, 'message:', error.message);
   
   let message = 'Location error';
   switch (error.code) {
@@ -134,6 +166,8 @@ function handlePositionError(error) {
     case error.TIMEOUT:
       message = 'Location request timed out. Trying again...';
       break;
+    default:
+      message = 'Unknown location error (code: ' + error.code + ')';
   }
   
   if (onErrorCallback) onErrorCallback(message);
@@ -169,7 +203,6 @@ function calculateBearing(lat1, lon1, lat2, lon2) {
             Math.sin(phi1) * Math.cos(phi2) * Math.cos(deltaLambda);
   
   let bearing = toDegrees(Math.atan2(y, x));
-  // Normalise to 0-360
   return (bearing + 360) % 360;
 }
 

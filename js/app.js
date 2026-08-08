@@ -1,4 +1,4 @@
-// app.js - Main application controller (debug mode, fixed)
+// app.js - Main application controller (debug mode v2)
 
 // Game state
 let totalDistanceToday = 0;
@@ -8,6 +8,8 @@ let wakeLockSupported = false;
 let initialPositionSet = false;
 let updateCount = 0;
 let lastDebugMsgTime = 0;
+let lastLat = null;
+let lastLng = null;
 
 // Save interval (milliseconds)
 const SAVE_INTERVAL = 5000;
@@ -27,25 +29,21 @@ window.onerror = function(message, source, lineno, colno, error) {
  * Initialise the application
  */
 async function initApp() {
-  console.log('[App] Starting Dino Walk (debug mode)...');
+  console.log('[App] Starting Dino Walk (debug mode v2)...');
   
-  // Initialise UI elements
   initUI();
   initDebugPanel();
   
-  // Open database
   try {
     await openDB();
     console.log('[App] Database ready');
   } catch (error) {
     console.error('[App] Failed to open database:', error);
-    showError('Storage not available. Progress won\'t be saved.');
+    showError('Storage not available.');
   }
   
-  // Load saved state
   await loadSavedState();
   
-  // Check for Wake Lock support
   wakeLockSupported = 'wakeLock' in navigator;
   if (wakeLockSupported) {
     console.log('[App] Wake Lock supported');
@@ -54,17 +52,16 @@ async function initApp() {
     console.log('[App] Wake Lock not supported');
   }
   
-  // Set up geolocation callbacks BEFORE getting initial position
+  // Set callbacks BEFORE getting position
   onPositionUpdateCallback = handlePositionUpdate;
   onErrorCallback = handleGeoError;
-  console.log('[App] Geolocation callbacks registered');
+  console.log('[App] Callbacks registered');
   
-  // Get initial position to set up the map
   getInitialPosition();
 }
 
 /**
- * Create a small debug panel
+ * Create debug panel with more info
  */
 function initDebugPanel() {
   const debugDiv = document.createElement('div');
@@ -73,35 +70,47 @@ function initDebugPanel() {
     position: fixed;
     bottom: 30px;
     right: 20px;
-    background: rgba(0,0,0,0.75);
+    background: rgba(0,0,0,0.8);
     color: #0f0;
-    padding: 8px 12px;
+    padding: 10px 14px;
     border-radius: 12px;
     font-family: monospace;
     font-size: 11px;
     z-index: 2000;
     pointer-events: none;
-    line-height: 1.4;
+    line-height: 1.6;
+    max-width: 180px;
   `;
-  debugDiv.innerHTML = 'Updates: 0<br>Last dist: -- m';
+  debugDiv.innerHTML = `
+    Updates: 0<br>
+    Dist: -- m<br>
+    Acc: -- m<br>
+    Lat: --<br>
+    Lng: --
+  `;
   document.body.appendChild(debugDiv);
 }
 
-/**
- * Update debug panel - FIXED: handle undefined/null distance
- */
-function updateDebugPanel(distance) {
+function updateDebugPanel(distance, accuracy, lat, lng) {
   const panel = document.getElementById('debug-panel');
   if (panel) {
-    const distStr = (distance != null && !isNaN(distance)) 
-      ? distance.toFixed(2) + ' m' 
-      : '-- m';
-    panel.innerHTML = `Updates: ${updateCount}<br>Last dist: ${distStr}`;
+    const distStr = (distance != null && !isNaN(distance)) ? distance.toFixed(2) : '--';
+    const accStr = (accuracy != null && !isNaN(accuracy)) ? Math.round(accuracy) : '--';
+    const latStr = (lat != null) ? lat.toFixed(6) : '--';
+    const lngStr = (lng != null) ? lng.toFixed(6) : '--';
+    
+    panel.innerHTML = `
+      Updates: ${updateCount}<br>
+      Dist: ${distStr} m<br>
+      Acc: ${accStr} m<br>
+      Lat: ${latStr}<br>
+      Lng: ${lngStr}
+    `;
   }
 }
 
 /**
- * Get the initial position and set up the map
+ * Get the initial position
  */
 function getInitialPosition() {
   showStatus('Getting your location...', 0);
@@ -113,15 +122,12 @@ function getInitialPosition() {
       console.log('[App] Initial position:', latitude, longitude, 'accuracy:', accuracy);
       showStatus('Location acquired, starting tracking...', 2000);
       
-      // Initialise the map
       initMap(latitude, longitude);
       
-      // Restore trail if we have saved coordinates
       if (gameState && gameState.trailPoints && gameState.trailPoints.length > 0) {
         restoreTrail(gameState.trailPoints);
       }
       
-      // Start tracking (callbacks are already set)
       const trackingStarted = startTracking();
       console.log('[App] Tracking started:', trackingStarted);
       
@@ -129,17 +135,17 @@ function getInitialPosition() {
         showError('Could not start position tracking');
       }
       
-      // Update display
       updateDistanceDisplay(totalDistanceToday);
-      
-      // Set initial position flag
       initialPositionSet = true;
+      
+      // Show initial coords in debug
+      updateDebugPanel(0, accuracy, latitude, longitude);
       
       showStatus('Ready to walk! 🦕', 4000);
     },
     (error) => {
       console.error('[App] Failed to get initial position:', error);
-      showError('Could not get your location. Check GPS and permissions.');
+      showError('Could not get your location.');
     },
     {
       enableHighAccuracy: true,
@@ -155,7 +161,6 @@ function getInitialPosition() {
 let gameState = null;
 
 function handlePositionUpdate(data) {
-  // Safety check - if data is undefined, return early
   if (!data) {
     console.warn('[App] handlePositionUpdate called with no data');
     return;
@@ -165,26 +170,31 @@ function handlePositionUpdate(data) {
   
   updateCount++;
   
-  // Show a debug status message (throttled to every 2 seconds max)
+  // Store for debug
+  lastLat = latitude;
+  lastLng = longitude;
+  
+  // Show a debug status message (every 2 seconds)
   const now = Date.now();
   if (now - lastDebugMsgTime > 2000) {
     const distStr = (distance != null) ? distance.toFixed(1) : '0.0';
-    const accStr = (accuracy != null) ? Math.round(accuracy) : '?';
-    showStatus(`📍 Update #${updateCount} | dist: ${distStr}m | acc: ${accStr}m`, 2000);
+    const accStr = (accuracy != null) ? Math.round(accuracy) + 'm' : '?m';
+    const latStr = (latitude != null) ? latitude.toFixed(5) : '?';
+    showStatus(`📍 #${updateCount} | dist:${distStr}m | acc:${accStr} | lat:${latStr}`, 2000);
     lastDebugMsgTime = now;
   }
   
-  // Update debug panel - FIXED: pass distance safely
-  updateDebugPanel(distance || 0);
+  // Update debug panel with all values
+  updateDebugPanel(distance || 0, accuracy, latitude, longitude);
   
-  // Update total distance for today
+  // Update total distance
   if (distance && distance > 0) {
     totalDistanceToday += distance;
     updateDistanceDisplay(totalDistanceToday);
-    console.log(`[App] Distance added: ${distance.toFixed(2)}m, total: ${totalDistanceToday.toFixed(2)}m`);
+    console.log(`[App] Distance: ${distance.toFixed(2)}m, Total: ${totalDistanceToday.toFixed(2)}m`);
   }
   
-  // Update map (arrow position and trail)
+  // Update map
   if (initialPositionSet && latitude != null && longitude != null) {
     updateUserPosition(latitude, longitude, heading || 0);
   }
@@ -196,9 +206,6 @@ function handlePositionUpdate(data) {
   }
 }
 
-/**
- * Handle geolocation errors
- */
 function handleGeoError(message) {
   if (typeof showError === 'function') {
     showError('Geo Error: ' + message);
@@ -206,9 +213,6 @@ function handleGeoError(message) {
   console.error('[App] Geo error:', message);
 }
 
-/**
- * Save the current game state
- */
 async function saveCurrentState() {
   try {
     const state = {
@@ -216,7 +220,6 @@ async function saveCurrentState() {
       lastDate: new Date().toISOString(),
       trailPoints: getTrailCoordinates()
     };
-    
     await saveGameState(state);
     gameState = state;
     console.log('[App] State saved:', Math.round(totalDistanceToday), 'm');
@@ -225,15 +228,11 @@ async function saveCurrentState() {
   }
 }
 
-/**
- * Load saved game state
- */
 async function loadSavedState() {
   try {
     gameState = await loadGameState();
-    
     if (isNewDay(gameState.lastDate)) {
-      console.log('[App] New day detected, resetting distance');
+      console.log('[App] New day, resetting distance');
       totalDistanceToday = 0;
     } else {
       totalDistanceToday = gameState.totalDistanceToday || 0;
@@ -245,80 +244,49 @@ async function loadSavedState() {
   }
 }
 
-/**
- * Request Wake Lock to keep screen on
- */
 async function requestWakeLock() {
   if (!wakeLockSupported) return;
-  
   try {
     wakeLock = await navigator.wakeLock.request('screen');
     console.log('[App] Wake Lock acquired');
-    if (typeof showWakeLockIndicator === 'function') {
-      showWakeLockIndicator();
-    }
-    
+    if (typeof showWakeLockIndicator === 'function') showWakeLockIndicator();
     wakeLock.addEventListener('release', () => {
       console.log('[App] Wake Lock released');
-      if (typeof hideWakeLockIndicator === 'function') {
-        hideWakeLockIndicator();
-      }
-      
+      if (typeof hideWakeLockIndicator === 'function') hideWakeLockIndicator();
       if (document.visibilityState === 'visible') {
         setTimeout(() => requestWakeLock(), 1000);
       }
     });
   } catch (error) {
-    console.warn('[App] Wake Lock request failed:', error);
-    if (typeof hideWakeLockIndicator === 'function') {
-      hideWakeLockIndicator();
-    }
+    console.warn('[App] Wake Lock failed:', error);
+    if (typeof hideWakeLockIndicator === 'function') hideWakeLockIndicator();
   }
 }
 
-/**
- * Re-acquire Wake Lock when visibility changes
- */
 document.addEventListener('visibilitychange', async () => {
   if (document.visibilityState === 'visible' && wakeLockSupported) {
     if (!wakeLock || wakeLock.released) {
-      console.log('[App] Visibility restored, re-acquiring Wake Lock');
+      console.log('[App] Re-acquiring Wake Lock');
       await requestWakeLock();
     }
   }
 });
 
-/**
- * Save state before the page is unloaded
- */
 window.addEventListener('beforeunload', () => {
   saveCurrentState();
-  if (wakeLock) {
-    wakeLock.release().catch(() => {});
-  }
+  if (wakeLock) wakeLock.release().catch(() => {});
 });
 
-/**
- * Save state when the page is hidden
- */
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') {
-    saveCurrentState();
-  }
+  if (document.visibilityState === 'hidden') saveCurrentState();
 });
 
-// Register Service Worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/jurassicwalk/sw.js')
-      .then((registration) => {
-        console.log('[App] Service Worker registered:', registration.scope);
-      })
-      .catch((error) => {
-        console.error('[App] Service Worker registration failed:', error);
-      });
+      .then(reg => console.log('[App] SW registered:', reg.scope))
+      .catch(err => console.error('[App] SW registration failed:', err));
   });
 }
 
-// Start the app when DOM is ready
 document.addEventListener('DOMContentLoaded', initApp);
