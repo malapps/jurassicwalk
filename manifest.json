@@ -1,6 +1,6 @@
 {
-  "name": "Dino Walk",
-  "short_name": "DinoWalk",
+  "name": "Jurassic Walk",
+  "short_name": "JurassicWalk",
   "description": "Walk, discover amber, and hatch dinosaurs!",
   "start_url": ".",
   "display": "standalone",

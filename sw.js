@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dinowalk-v1.0.0';
+const CACHE_NAME = 'jurassicwalk-v1';
 const ASSETS_TO_CACHE = [
   '/jurassicwalk/',
   '/jurassicwalk/index.html',

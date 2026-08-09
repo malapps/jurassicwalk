@@ -1,30 +1,27 @@
-// geo.js - Geolocation tracking and distance calculation
+// geo.js – Geolocation tracking and distance calculation
 
-// Constants
 const EARTH_RADIUS_METRES = 6371000;
-const MIN_DISTANCE_THRESHOLD = 1.0;  // Ignore movements smaller than 1m
-const MAX_JUMP_THRESHOLD = 100;      // Ignore GPS jumps larger than 100m
+const MIN_DISTANCE_THRESHOLD = 1.0;      // min metres to count as movement
+const MAX_JUMP_THRESHOLD = 100;          // ignore GPS glitches
+const HEADING_UPDATE_MIN_DIST = 2.0;     // only update arrow if moved ≥ 2m
 
-// State
 let watchId = null;
 let lastPosition = null;
 let trackingActive = false;
+let lastHeading = 0;                     // smooth bearing memory
 
 // Callbacks (set by app.js)
 let onPositionUpdateCallback = null;
 let onErrorCallback = null;
 
-/**
- * Start watching the user's position
- */
 function startTracking() {
   if (!navigator.geolocation) {
     console.error('[Geo] Geolocation not supported');
-    if (onErrorCallback) onErrorCallback('Geolocation not supported on this device');
+    if (onErrorCallback) onErrorCallback('Geolocation not supported');
     return false;
   }
 
-  console.log('[Geo] Starting position tracking...');
+  console.log('[Geo] Starting tracking...');
   trackingActive = true;
 
   watchId = navigator.geolocation.watchPosition(
@@ -40,9 +37,6 @@ function startTracking() {
   return true;
 }
 
-/**
- * Stop watching the position
- */
 function stopTracking() {
   if (watchId !== null) {
     navigator.geolocation.clearWatch(watchId);
@@ -52,171 +46,88 @@ function stopTracking() {
   }
 }
 
-/**
- * Geolocation watchPosition success handler
- */
 function geoWatchSuccess(position) {
-  // Validate we received a proper position object
-  if (!position || !position.coords) {
-    console.error('[Geo] Received invalid position object');
-    return;
-  }
-  
-  const coords = position.coords;
-  
-  // Extract values
-  const latitude = coords.latitude;
-  const longitude = coords.longitude;
-  const accuracy = coords.accuracy;
-  const heading = coords.heading;    // May be null/undefined
-  const speed = coords.speed;        // May be null/undefined
-  
-  // Validate we have the essentials
-  if (latitude == null || longitude == null) {
-    console.error('[Geo] Missing latitude/longitude in coords');
-    return;
-  }
-  
-  // Calculate heading from movement if device doesn't provide it
-  let finalHeading = heading;
-  if ((finalHeading == null) && lastPosition) {
-    finalHeading = calculateBearing(
-      lastPosition.latitude,
-      lastPosition.longitude,
-      latitude,
-      longitude
-    );
-  }
-  
-  // Default heading to 0 (North) if still unknown
-  if (finalHeading == null) {
-    finalHeading = 0;
-  }
-  
-  // Calculate distance from last position
+  if (!position || !position.coords) return;
+
+  const { latitude, longitude, accuracy } = position.coords;
+  if (latitude == null || longitude == null) return;
+
   let distance = 0;
+  let bearing = lastHeading; // default to current direction
+
   if (lastPosition) {
     distance = haversineDistance(
-      lastPosition.latitude,
-      lastPosition.longitude,
-      latitude,
-      longitude
+      lastPosition.latitude, lastPosition.longitude,
+      latitude, longitude
     );
-    
-    // Filter out unrealistic values
-    if (distance < MIN_DISTANCE_THRESHOLD) {
-      // GPS jitter - position changed but by less than 1 metre
-      // We still update the map position but don't count the distance
-      distance = 0;
-    } else if (distance > MAX_JUMP_THRESHOLD) {
-      // GPS glitch - probably a bad position fix
-      // Don't update lastPosition so the next good fix will calculate correctly
-      return;
+
+    // Filter unrealistic jumps
+    if (distance > MAX_JUMP_THRESHOLD) {
+      return; // throw away this update
     }
-  }
-  
-  // Update last position
-  lastPosition = {
-    latitude: latitude,
-    longitude: longitude,
-    timestamp: position.timestamp
-  };
-  
-  // Build the data object to send to the callback
-  const positionData = {
-    latitude: latitude,
-    longitude: longitude,
-    heading: finalHeading,
-    speed: speed || 0,
-    distance: distance,
-    accuracy: accuracy || 0,
-    timestamp: position.timestamp
-  };
-  
-  // Call the callback if it exists
-  if (onPositionUpdateCallback) {
-    onPositionUpdateCallback(positionData);
+
+    if (distance >= HEADING_UPDATE_MIN_DIST) {
+      // Only update bearing when we've actually moved enough
+      bearing = calculateBearing(
+        lastPosition.latitude, lastPosition.longitude,
+        latitude, longitude
+      );
+      lastHeading = bearing; // remember for when stationary
+    }
+
+    if (distance < MIN_DISTANCE_THRESHOLD) {
+      distance = 0; // don't add tiny jitter to daily total
+    }
   } else {
-    console.error('[Geo] No onPositionUpdateCallback set! Updates are being lost!');
+    // First ever fix – we can't calculate bearing yet
+    bearing = 0;
+  }
+
+  lastPosition = {
+    latitude,
+    longitude,
+    timestamp: position.timestamp
+  };
+
+  if (onPositionUpdateCallback) {
+    onPositionUpdateCallback({
+      latitude,
+      longitude,
+      heading: bearing,
+      speed: position.coords.speed || 0,
+      distance,
+      accuracy: accuracy || 0,
+      timestamp: position.timestamp
+    });
   }
 }
 
-/**
- * Geolocation watchPosition error handler
- */
 function geoWatchError(error) {
-  console.error('[Geo] Watch error - code:', error.code, 'message:', error.message);
-  
+  console.error('[Geo] Watch error:', error.code, error.message);
   let message = 'Location error';
   switch (error.code) {
-    case error.PERMISSION_DENIED:
-      message = 'Location permission denied. Please enable location access.';
-      break;
-    case error.POSITION_UNAVAILABLE:
-      message = 'Location unavailable. Check your GPS signal.';
-      break;
-    case error.TIMEOUT:
-      message = 'Location request timed out. Trying again...';
-      break;
-    default:
-      message = 'Location error (code: ' + error.code + ')';
+    case 1: message = 'Location permission denied.'; break;
+    case 2: message = 'Location unavailable. Check GPS.'; break;
+    case 3: message = 'Location timed out. Retrying...'; break;
   }
-  
-  if (onErrorCallback) {
-    onErrorCallback(message);
-  }
+  if (onErrorCallback) onErrorCallback(message);
 }
 
-/**
- * Calculate distance between two points using Haversine formula
- */
 function haversineDistance(lat1, lon1, lat2, lon2) {
-  const phi1 = toRadians(lat1);
-  const phi2 = toRadians(lat2);
-  const deltaPhi = toRadians(lat2 - lat1);
-  const deltaLambda = toRadians(lon2 - lon1);
-  
-  const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
-            Math.cos(phi1) * Math.cos(phi2) *
-            Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  
-  return EARTH_RADIUS_METRES * c;
+  const φ1 = toRadians(lat1), φ2 = toRadians(lat2);
+  const Δφ = toRadians(lat2 - lat1), Δλ = toRadians(lon2 - lon1);
+  const a = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
+  return EARTH_RADIUS_METRES * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-/**
- * Calculate bearing between two points
- */
 function calculateBearing(lat1, lon1, lat2, lon2) {
-  const phi1 = toRadians(lat1);
-  const phi2 = toRadians(lat2);
-  const deltaLambda = toRadians(lon2 - lon1);
-  
-  const y = Math.sin(deltaLambda) * Math.cos(phi2);
-  const x = Math.cos(phi1) * Math.sin(phi2) -
-            Math.sin(phi1) * Math.cos(phi2) * Math.cos(deltaLambda);
-  
-  let bearing = toDegrees(Math.atan2(y, x));
-  return (bearing + 360) % 360;
+  const φ1 = toRadians(lat1), φ2 = toRadians(lat2);
+  const Δλ = toRadians(lon2 - lon1);
+  const y = Math.sin(Δλ) * Math.cos(φ2);
+  const x = Math.cos(φ1)*Math.sin(φ2) - Math.sin(φ1)*Math.cos(φ2)*Math.cos(Δλ);
+  return (toDegrees(Math.atan2(y, x)) + 360) % 360;
 }
 
-/**
- * Convert degrees to radians
- */
-function toRadians(degrees) {
-  return degrees * (Math.PI / 180);
-}
-
-/**
- * Convert radians to degrees
- */
-function toDegrees(radians) {
-  return radians * (180 / Math.PI);
-}
-
-/**
- * Check if tracking is currently active
- */
-function isTracking() {
-  return trackingActive;
-}
+function toRadians(deg) { return deg * Math.PI / 180; }
+function toDegrees(rad) { return rad * 180 / Math.PI; }
+function isTracking() { return trackingActive; }
