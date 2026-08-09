@@ -25,14 +25,17 @@
     <span id="distance-label">today</span>
   </div>
 
-  <!-- Wake Lock indicator (top right, subtle) -->
-  <div id="wakelock-indicator" title="Screen will stay awake while walking">
-    🔆
-  </div>
+  <!-- Pause button (top left, hidden until game starts) -->
+  <button id="pause-btn" title="Pause walk">⏸</button>
 
-  <!-- Status bar for messages -->
-  <div id="status-bar">
-    <span id="status-text">Ready to walk!</span>
+  <!-- Start walk overlay (full screen) -->
+  <div id="start-overlay">
+    <div id="start-card">
+      <div id="start-icon">🦕</div>
+      <h1>Jurassic Walk</h1>
+      <p>Walk to discover amber and hatch dinosaurs!</p>
+      <button id="start-btn">START WALK</button>
+    </div>
   </div>
 
   <!-- Load scripts -->

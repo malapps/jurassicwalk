@@ -34,12 +34,12 @@ function initMap(latitude, longitude) {
     zIndexOffset: 1000
   }).addTo(map);
 
-  // Dotted footstep trail
+  // Perforated (dashed) trail
   trailPolyline = L.polyline([], {
-    color: '#D35400',          // slightly darker amber
+    color: '#D35400',
     weight: 3,
-    opacity: 0.8,
-    dashArray: '1 12',         // 1px dash, 12px gap → dots
+    opacity: 0.7,
+    dashArray: '10 10',
     lineCap: 'round',
     lineJoin: 'round',
     smoothFactor: 1
@@ -70,7 +70,6 @@ function createArrowIcon() {
 
 function updateUserPosition(latitude, longitude, heading) {
   if (!map || !userMarker) return;
-
   try {
     userMarker.setLatLng([latitude, longitude]);
 
@@ -87,7 +86,7 @@ function updateUserPosition(latitude, longitude, heading) {
 
     map.panTo([latitude, longitude], { animate: true, duration: 0.5 });
   } catch (e) {
-    console.error('[Map] Error updating position:', e);
+    console.error('[Map] Error:', e);
   }
 }
 

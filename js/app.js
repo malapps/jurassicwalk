@@ -5,13 +5,13 @@ let lastSaveTime = 0;
 let wakeLock = null;
 let wakeLockSupported = false;
 let initialPositionSet = false;
+let gameActive = false;          // NEW: distance only accumulates when true
+
 const SAVE_INTERVAL = 5000;
 
-window.onerror = function(message, source, lineno) {
-  console.error('Error:', message, 'at', source, lineno);
-  if (typeof showError === 'function') {
-    showError('Something went wrong. Please refresh the page.');
-  }
+window.onerror = function(msg, src, lineno) {
+  console.error('Error:', msg, 'at', src, lineno);
+  if (typeof showError === 'function') showError('Something went wrong. Please refresh.');
   return true;
 };
 
@@ -19,16 +19,14 @@ async function initApp() {
   console.log('[App] Starting Jurassic Walk...');
   initUI();
 
-  // Storage (localStorage – no IndexedDB)
   try {
     await openDB();
-    console.log('[App] Storage ready');
   } catch (e) {
     showError('Storage not available. Progress won\'t be saved.');
-    console.error('[App] Storage error:', e);
   }
 
   await loadSavedState();
+  updateDistanceDisplay(totalDistanceToday);
 
   wakeLockSupported = 'wakeLock' in navigator;
   if (wakeLockSupported) {
@@ -40,7 +38,7 @@ async function initApp() {
   onErrorCallback = handleGeoError;
 
   getInitialPosition();
-  showPWAPrompt();
+  // Don't show PWA prompt immediately; it will appear via beforeinstallprompt
 }
 
 function getInitialPosition() {
@@ -56,11 +54,12 @@ function getInitialPosition() {
       const started = startTracking();
       if (!started) showError('Could not start location tracking');
 
-      updateDistanceDisplay(totalDistanceToday);
+      // Show start overlay – game is not active yet
+      showStartOverlay();
       initialPositionSet = true;
     },
     (err) => {
-      showError('Could not get your location. Check GPS and permissions.');
+      showError('Could not get your location.');
       console.error(err);
     },
     { enableHighAccuracy: true, timeout: 20000, maximumAge: 60000 }
@@ -73,13 +72,15 @@ function handlePositionUpdate(data) {
   if (!data) return;
   const { latitude, longitude, heading, distance } = data;
 
-  if (distance > 0) {
-    totalDistanceToday += distance;
-    updateDistanceDisplay(totalDistanceToday);
-  }
-
+  // Always update map position (arrow, trail)
   if (initialPositionSet && latitude != null && longitude != null) {
     updateUserPosition(latitude, longitude, heading);
+  }
+
+  // Only accumulate distance when game is active
+  if (gameActive && distance > 0) {
+    totalDistanceToday += distance;
+    updateDistanceDisplay(totalDistanceToday);
   }
 
   const now = Date.now();
@@ -87,6 +88,22 @@ function handlePositionUpdate(data) {
     saveCurrentState();
     lastSaveTime = now;
   }
+}
+
+// Called when START WALK button is pressed
+function startGame() {
+  gameActive = true;
+  hideStartOverlay();
+  showToast('Walk started! 🦕');
+  console.log('[App] Game active');
+}
+
+// Called when pause button is pressed
+function pauseGame() {
+  gameActive = false;
+  showStartOverlay();
+  showToast('Walk paused');
+  console.log('[App] Game paused');
 }
 
 function handleGeoError(msg) {
@@ -116,7 +133,6 @@ async function loadSavedState() {
       totalDistanceToday = gameState.totalDistanceToday || 0;
     }
   } catch (e) {
-    console.error('[App] Load failed:', e);
     totalDistanceToday = 0;
   }
 }
@@ -126,13 +142,9 @@ async function requestWakeLock() {
   try {
     wakeLock = await navigator.wakeLock.request('screen');
     wakeLock.addEventListener('release', () => {
-      if (document.visibilityState === 'visible') {
-        setTimeout(() => requestWakeLock(), 1000);
-      }
+      if (document.visibilityState === 'visible') setTimeout(() => requestWakeLock(), 1000);
     });
-  } catch (e) {
-    console.warn('[App] Wake Lock:', e);
-  }
+  } catch (e) {}
 }
 
 document.addEventListener('visibilitychange', async () => {

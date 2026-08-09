@@ -72,6 +72,101 @@ html, body {
   letter-spacing: 0.5px;
 }
 
+/* === Start Overlay (full screen) === */
+#start-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 5000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.5s ease;
+}
+
+#start-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#start-card {
+  background: #1B5E20;
+  border-radius: 30px;
+  padding: 40px 30px;
+  text-align: center;
+  color: #fff;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+  max-width: 320px;
+  width: 90%;
+}
+
+#start-icon {
+  font-size: 60px;
+  margin-bottom: 10px;
+}
+
+#start-card h1 {
+  font-size: 1.8em;
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+
+#start-card p {
+  font-size: 0.95em;
+  opacity: 0.8;
+  margin-bottom: 25px;
+  line-height: 1.4;
+}
+
+#start-btn {
+  background: #FF8F00;
+  color: #1B5E20;
+  border: none;
+  padding: 15px 40px;
+  font-size: 1.2em;
+  font-weight: 700;
+  border-radius: 30px;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(255,143,0,0.4);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+#start-btn:active {
+  transform: scale(0.95);
+  box-shadow: 0 2px 10px rgba(255,143,0,0.6);
+}
+
+/* === Pause Button === */
+#pause-btn {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #fff;
+  border: 2px solid rgba(255,255,255,0.3);
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+#pause-btn.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 /* === Toast Notification === */
 #toast {
   position: fixed;
@@ -98,16 +193,11 @@ html, body {
   transform: translateX(-50%) translateY(0);
 }
 
-#toast .toast-icon {
-  margin-right: 6px;
-}
-
-/* === Add to Home Screen Prompt === */
+/* === PWA Install Prompt === */
 #pwa-prompt {
   position: fixed;
   bottom: 0;
-  left: 0;
-  right: 0;
+  left: 0; right: 0;
   background: rgba(27, 94, 32, 0.95);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
@@ -134,25 +224,21 @@ html, body {
 }
 
 #pwa-prompt-close {
-  background: none;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  color: #fff;
+  background: #fff;
+  color: #1B5E20;
+  border: none;
   padding: 8px 16px;
   border-radius: 20px;
+  font-weight: 700;
   font-size: 0.85em;
   cursor: pointer;
   white-space: nowrap;
-  -webkit-tap-highlight-color: transparent;
 }
 
-#pwa-prompt-close:active {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-/* === Status Bar (subtle, only for errors now) === */
+/* === Status Bar (errors only) === */
 #status-bar {
   position: fixed;
-  top: 20px;
+  top: 70px;
   left: 20px;
   right: 20px;
   background: rgba(180, 30, 30, 0.9);
@@ -171,44 +257,16 @@ html, body {
   text-align: center;
 }
 
-#status-bar.visible {
-  opacity: 1;
-}
-
-#status-bar.hidden {
-  opacity: 0;
-}
-
-/* === User Arrow Marker === */
-.user-arrow-marker {
-  background: transparent !important;
-  border: none !important;
-}
-
-/* === Responsive === */
-@media (max-width: 400px) {
-  #distance-panel {
-    bottom: 20px;
-    left: 12px;
-    padding: 10px 16px;
-  }
-  
-  #distance-value {
-    font-size: 1.6em;
-  }
-}
+#status-bar.visible { opacity: 1; }
+#status-bar.hidden { opacity: 0; }
 
 /* === Leaflet Overrides === */
-.leaflet-container {
-  font-family: inherit;
-}
-
+.leaflet-container { font-family: inherit; }
 .leaflet-control-zoom {
   border: 2px solid rgba(0, 0, 0, 0.2) !important;
   border-radius: 12px !important;
   overflow: hidden;
 }
-
 .leaflet-control-zoom a {
   background: rgba(255, 255, 255, 0.9) !important;
   color: #333 !important;
@@ -223,10 +281,7 @@ html, body {
   #map::after {
     content: "Please rotate to portrait mode";
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    top: 0; left: 0; right: 0; bottom: 0;
     background: rgba(0, 0, 0, 0.9);
     color: white;
     display: flex;
