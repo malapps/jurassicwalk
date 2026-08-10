@@ -98,6 +98,7 @@ html, body {
   gap: 0;
   padding: 12px 12px;
   min-width: auto;
+  min-height: 64px;
 }
 
 /* Left distance area */
@@ -107,7 +108,7 @@ html, body {
   align-items: center;
   justify-content: center;
   flex: 1;
-  min-width: 80px;         /* room for up to "10.1 km" */
+  min-width: 80px;
   padding-right: 8px;
 }
 
@@ -120,11 +121,11 @@ html, body {
 /* Split line (perforated vertical) */
 .split-line {
   width: 0;
-  height: 60%;
-  border-left: 2px dashed rgba(255, 255, 255, 0.7);  /* brighter white */
+  height: 32px;
+  border-left: 2px dashed rgba(255, 255, 255, 0.7);
   align-self: center;
+  margin: 0 4px;
 }
-
 
 /* Pause button area */
 .pause-button {
@@ -147,7 +148,7 @@ html, body {
   line-height: 1;
 }
 
-/* === Start Overlay (unchanged) === */
+/* === Start Overlay === */
 #start-overlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
