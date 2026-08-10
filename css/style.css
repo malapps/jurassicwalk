@@ -120,10 +120,11 @@ html, body {
 /* Split line (perforated vertical) */
 .split-line {
   width: 0;
-  height: 60%;             /* doesn't stretch full height */
-  border-left: 2px dashed rgba(255, 255, 255, 0.5);
+  height: 60%;
+  border-left: 2px dashed rgba(255, 255, 255, 0.7);  /* brighter white */
   align-self: center;
 }
+
 
 /* Pause button area */
 .pause-button {

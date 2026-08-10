@@ -34,12 +34,11 @@ function initMap(latitude, longitude) {
     zIndexOffset: 1000
   }).addTo(map);
 
-  // Perforated (dashed) trail
+    // Solid trail
   trailPolyline = L.polyline([], {
     color: '#D35400',
     weight: 3,
     opacity: 0.7,
-    dashArray: '10 10',
     lineCap: 'round',
     lineJoin: 'round',
     smoothFactor: 1
