@@ -33,19 +33,19 @@ html, body {
 /* === Bottom Controls Container === */
 #bottom-controls {
   position: fixed;
-  bottom: 30px;               /* Raised above navigation bar */
+  bottom: 30px;
   left: 0;
   right: 0;
   display: flex;
   justify-content: space-evenly;
   align-items: center;
   z-index: 1000;
-  pointer-events: none;       /* Container doesn't intercept clicks */
+  pointer-events: none;
 }
 
-/* Individual floating pills */
+/* Individual floating pills – shared styles */
 .bottom-panel {
-  pointer-events: auto;       /* Buttons inside are interactive */
+  pointer-events: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -55,26 +55,16 @@ html, body {
   -webkit-backdrop-filter: blur(10px);
   border: 2px solid rgba(255, 183, 77, 0.5);
   border-radius: 20px;
-  padding: 10px 16px;
+  padding: 12px 16px;
   min-width: 80px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   color: #fff;
-  font-size: 0.85em;
-  cursor: default;
   transition: transform 0.2s ease;
 }
 
-/* Pause panel specific (button) */
-#pause-panel {
-  cursor: pointer;
-  background: rgba(0, 0, 0, 0.75);
-  border: 2px solid rgba(255, 183, 77, 0.5);
-  padding: 8px 16px;
-  min-width: 60px;
-}
-
-#pause-panel:active {
-  transform: scale(0.95);
+/* Amber panel keeps default column layout */
+#amber-panel {
+  gap: 2px;
 }
 
 /* Amber icon styling */
@@ -84,7 +74,7 @@ html, body {
   margin-bottom: 2px;
 }
 
-/* Value text (number) */
+/* Value text (number) – base, used by amber count */
 .bb-value {
   font-size: 1.3em;
   font-weight: 700;
@@ -101,7 +91,62 @@ html, body {
   margin-top: 2px;
 }
 
-/* === Start Overlay (full screen) === */
+/* ===== Combined Distance + Pause Panel ===== */
+#distance-pause-panel {
+  flex-direction: row;
+  align-items: center;
+  gap: 0;
+  padding: 12px 12px;
+  min-width: auto;
+}
+
+/* Left distance area */
+#distance-part {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-width: 80px;         /* room for up to "10.1 km" */
+  padding-right: 8px;
+}
+
+/* Distance value – larger font to match taller pill */
+#distance-part .bb-value {
+  font-size: 1.8em;
+  font-weight: 700;
+}
+
+/* Split line (perforated vertical) */
+.split-line {
+  width: 0;
+  height: 60%;             /* doesn't stretch full height */
+  border-left: 2px dashed rgba(255, 255, 255, 0.5);
+  align-self: center;
+}
+
+/* Pause button area */
+.pause-button {
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pause-button:active {
+  opacity: 0.7;
+}
+
+.pause-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+/* === Start Overlay (unchanged) === */
 #start-overlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;

@@ -18,25 +18,26 @@
   <!-- Map container -->
   <div id="map"></div>
 
-  <!-- Floating bottom controls container (transparent, for layout) -->
+  <!-- Floating bottom controls -->
   <div id="bottom-controls">
-    <!-- Amber panel -->
+    <!-- Amber panel (unchanged) -->
     <div id="amber-panel" class="bottom-panel">
       <span class="bb-icon">🟠</span>
       <span class="bb-value" id="amber-count">0</span>
       <span class="bb-label">amber</span>
     </div>
 
-    <!-- Distance panel -->
-    <div id="distance-panel" class="bottom-panel">
-      <span class="bb-value" id="distance-value">0 m</span>
-      <span class="bb-label">TODAY</span>
+    <!-- Combined distance + pause panel -->
+    <div id="distance-pause-panel" class="bottom-panel">
+      <div id="distance-part">
+        <span class="bb-value" id="distance-value">0 m</span>
+        <span class="bb-label">TODAY</span>
+      </div>
+      <div class="split-line"></div>
+      <button id="pause-part" class="pause-button">
+        <span class="pause-icon" id="pause-icon">▶</span>
+      </button>
     </div>
-
-    <!-- Pause panel -->
-    <button id="pause-panel" class="bottom-panel">
-      <span class="bb-icon" id="pause-icon">▶</span>
-    </button>
   </div>
 
   <!-- Start walk overlay (full screen) -->

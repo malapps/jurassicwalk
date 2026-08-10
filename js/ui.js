@@ -2,7 +2,6 @@
 
 let distanceValueEl;
 let amberCountEl;
-let pausePanelEl;
 let pauseIconEl;
 let statusBarEl;
 let statusTextEl;
@@ -16,7 +15,6 @@ let deferredPrompt = null;
 function initUI() {
   distanceValueEl = document.getElementById('distance-value');
   amberCountEl = document.getElementById('amber-count');
-  pausePanelEl = document.getElementById('pause-panel');
   pauseIconEl = document.getElementById('pause-icon');
   statusBarEl = document.getElementById('status-bar');
   statusTextEl = document.getElementById('status-text');
@@ -35,23 +33,22 @@ function initUI() {
     if (typeof startGame === 'function') startGame();
   });
 
-  // Pause button
-  pausePanelEl.addEventListener('click', () => {
+  // Pause button (now inside the combined pill)
+  document.getElementById('pause-part').addEventListener('click', () => {
     if (typeof togglePause === 'function') togglePause();
   });
 
-  // Listen for beforeinstallprompt
+  // beforeinstallprompt
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
     showPWAPrompt();
   });
 
-  // Stats placeholder – distance panel is tappable later
-  const distancePanel = document.getElementById('distance-panel');
-  if (distancePanel) {
-    distancePanel.addEventListener('click', () => {
-      // Future: open stats page
+  // Stats placeholder (tap distance part)
+  const distancePart = document.getElementById('distance-part');
+  if (distancePart) {
+    distancePart.addEventListener('click', () => {
       console.log('Stats tapped – not yet implemented');
     });
   }
@@ -98,9 +95,17 @@ function showToast(message, duration = 3000) {
   toastTimeout = setTimeout(() => toastEl.classList.remove('show'), duration);
 }
 
+/**
+ * Update distance display – automatically switches to km if ≥10000 m
+ */
 function updateDistanceDisplay(totalMetres) {
   if (!distanceValueEl) return;
-  distanceValueEl.textContent = Math.round(totalMetres) + ' m';
+  if (totalMetres >= 10000) {
+    const km = (totalMetres / 1000).toFixed(1);
+    distanceValueEl.textContent = km + ' km';
+  } else {
+    distanceValueEl.textContent = Math.round(totalMetres) + ' m';
+  }
 }
 
 function updateAmberDisplay(count) {
