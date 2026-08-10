@@ -2,7 +2,7 @@
 
 let distanceValueEl;
 let amberCountEl;
-let pauseBtnEl;
+let pausePanelEl;
 let pauseIconEl;
 let statusBarEl;
 let statusTextEl;
@@ -16,8 +16,8 @@ let deferredPrompt = null;
 function initUI() {
   distanceValueEl = document.getElementById('distance-value');
   amberCountEl = document.getElementById('amber-count');
-  pauseBtnEl = document.getElementById('bb-pause');
-  pauseIconEl = pauseBtnEl.querySelector('.bb-icon');
+  pausePanelEl = document.getElementById('pause-panel');
+  pauseIconEl = document.getElementById('pause-icon');
   statusBarEl = document.getElementById('status-bar');
   statusTextEl = document.getElementById('status-text');
   startOverlayEl = document.getElementById('start-overlay');
@@ -36,7 +36,7 @@ function initUI() {
   });
 
   // Pause button
-  pauseBtnEl.addEventListener('click', () => {
+  pausePanelEl.addEventListener('click', () => {
     if (typeof togglePause === 'function') togglePause();
   });
 
@@ -47,10 +47,10 @@ function initUI() {
     showPWAPrompt();
   });
 
-  // Stats placeholder – we'll wire this up later
-  const distanceBtn = document.getElementById('bb-distance');
-  if (distanceBtn) {
-    distanceBtn.addEventListener('click', () => {
+  // Stats placeholder – distance panel is tappable later
+  const distancePanel = document.getElementById('distance-panel');
+  if (distancePanel) {
+    distancePanel.addEventListener('click', () => {
       // Future: open stats page
       console.log('Stats tapped – not yet implemented');
     });
@@ -100,7 +100,7 @@ function showToast(message, duration = 3000) {
 
 function updateDistanceDisplay(totalMetres) {
   if (!distanceValueEl) return;
-  distanceValueEl.textContent = Math.round(totalMetres).toLocaleString();
+  distanceValueEl.textContent = Math.round(totalMetres) + ' m';
 }
 
 function updateAmberDisplay(count) {
@@ -143,7 +143,6 @@ function hideStartOverlay() {
   updatePauseButton(true); // show pause icon
 }
 
-// Update pause button icon based on gameActive
 function updatePauseButton(active) {
   if (!pauseIconEl) return;
   pauseIconEl.textContent = active ? '⏸' : '▶';

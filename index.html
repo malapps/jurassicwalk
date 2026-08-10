@@ -18,19 +18,24 @@
   <!-- Map container -->
   <div id="map"></div>
 
-  <!-- Bottom bar: amber | distance | pause -->
-  <div id="bottom-bar">
-    <div class="bb-item" id="bb-amber">
+  <!-- Floating bottom controls container (transparent, for layout) -->
+  <div id="bottom-controls">
+    <!-- Amber panel -->
+    <div id="amber-panel" class="bottom-panel">
       <span class="bb-icon">🟠</span>
       <span class="bb-value" id="amber-count">0</span>
       <span class="bb-label">amber</span>
     </div>
-    <button class="bb-item bb-tappable" id="bb-distance" data-action="stats" disabled>
-      <span class="bb-value" id="distance-value">0</span>
-      <span class="bb-label">m today</span>
-    </button>
-    <button class="bb-item" id="bb-pause">
-      <span class="bb-icon">▶</span>
+
+    <!-- Distance panel -->
+    <div id="distance-panel" class="bottom-panel">
+      <span class="bb-value" id="distance-value">0 m</span>
+      <span class="bb-label">TODAY</span>
+    </div>
+
+    <!-- Pause panel -->
+    <button id="pause-panel" class="bottom-panel">
+      <span class="bb-icon" id="pause-icon">▶</span>
     </button>
   </div>
 

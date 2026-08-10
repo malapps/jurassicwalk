@@ -30,79 +30,75 @@ html, body {
   opacity: 0.4;
 }
 
-/* === Bottom Bar === */
-#bottom-bar {
+/* === Bottom Controls Container === */
+#bottom-controls {
   position: fixed;
-  bottom: 0;
+  bottom: 30px;               /* Raised above navigation bar */
   left: 0;
   right: 0;
-  height: 64px;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
   display: flex;
+  justify-content: space-evenly;
   align-items: center;
-  justify-content: space-around;
   z-index: 1000;
-  border-top: 2px solid rgba(255, 183, 77, 0.4);
-  padding: 0 8px;
-  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
+  pointer-events: none;       /* Container doesn't intercept clicks */
 }
 
-.bb-item {
+/* Individual floating pills */
+.bottom-panel {
+  pointer-events: auto;       /* Buttons inside are interactive */
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  flex: 1;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 183, 77, 0.5);
+  border-radius: 20px;
+  padding: 10px 16px;
+  min-width: 80px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   color: #fff;
   font-size: 0.85em;
-  background: none;
-  border: none;
   cursor: default;
-  padding: 4px;
-  height: 100%;
+  transition: transform 0.2s ease;
 }
 
-.bb-item:active {
-  opacity: 0.7;
-}
-
-/* Tappable items (distance stats – future) */
-.bb-tappable {
+/* Pause panel specific (button) */
+#pause-panel {
   cursor: pointer;
+  background: rgba(0, 0, 0, 0.75);
+  border: 2px solid rgba(255, 183, 77, 0.5);
+  padding: 8px 16px;
+  min-width: 60px;
 }
 
-.bb-tappable:disabled {
-  cursor: default;
-  opacity: 0.6; /* visually indicate not yet active */
+#pause-panel:active {
+  transform: scale(0.95);
 }
 
+/* Amber icon styling */
 .bb-icon {
-  font-size: 20px;
+  font-size: 22px;
   line-height: 1;
+  margin-bottom: 2px;
 }
 
+/* Value text (number) */
 .bb-value {
-  font-size: 1.1em;
+  font-size: 1.3em;
   font-weight: 700;
   line-height: 1.2;
+  white-space: nowrap;
 }
 
+/* Label text (amber / TODAY) */
 .bb-label {
   font-size: 0.6em;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   opacity: 0.7;
-}
-
-/* Pause button specific */
-#bb-pause {
-  cursor: pointer;
-}
-
-#bb-pause .bb-icon {
-  font-size: 24px;
+  margin-top: 2px;
 }
 
 /* === Start Overlay (full screen) === */
