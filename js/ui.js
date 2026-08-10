@@ -1,23 +1,26 @@
 // ui.js – Jurassic Walk UI management
 
 let distanceValueEl;
+let amberCountEl;
+let pauseBtnEl;
+let pauseIconEl;
 let statusBarEl;
 let statusTextEl;
 let toastEl;
 let startOverlayEl;
-let pauseBtnEl;
 let statusTimeout = null;
 let toastTimeout = null;
 
-// PWA install
 let deferredPrompt = null;
 
 function initUI() {
   distanceValueEl = document.getElementById('distance-value');
+  amberCountEl = document.getElementById('amber-count');
+  pauseBtnEl = document.getElementById('bb-pause');
+  pauseIconEl = pauseBtnEl.querySelector('.bb-icon');
   statusBarEl = document.getElementById('status-bar');
   statusTextEl = document.getElementById('status-text');
   startOverlayEl = document.getElementById('start-overlay');
-  pauseBtnEl = document.getElementById('pause-btn');
 
   // Toast element
   toastEl = document.createElement('div');
@@ -27,14 +30,14 @@ function initUI() {
   // PWA install prompt
   createPWAPrompt();
 
-  // Start button listener
+  // Start button
   document.getElementById('start-btn').addEventListener('click', () => {
     if (typeof startGame === 'function') startGame();
   });
 
-  // Pause button listener
+  // Pause button
   pauseBtnEl.addEventListener('click', () => {
-    if (typeof pauseGame === 'function') pauseGame();
+    if (typeof togglePause === 'function') togglePause();
   });
 
   // Listen for beforeinstallprompt
@@ -43,6 +46,15 @@ function initUI() {
     deferredPrompt = e;
     showPWAPrompt();
   });
+
+  // Stats placeholder – we'll wire this up later
+  const distanceBtn = document.getElementById('bb-distance');
+  if (distanceBtn) {
+    distanceBtn.addEventListener('click', () => {
+      // Future: open stats page
+      console.log('Stats tapped – not yet implemented');
+    });
+  }
 
   console.log('[UI] Initialised');
 }
@@ -91,6 +103,11 @@ function updateDistanceDisplay(totalMetres) {
   distanceValueEl.textContent = Math.round(totalMetres).toLocaleString();
 }
 
+function updateAmberDisplay(count) {
+  if (!amberCountEl) return;
+  amberCountEl.textContent = count;
+}
+
 function showStatus(message, duration = 3000) {
   if (!statusBarEl || !statusTextEl) return;
   if (statusTimeout) clearTimeout(statusTimeout);
@@ -118,10 +135,16 @@ function showError(message) {
 // Game state UI controls
 function showStartOverlay() {
   if (startOverlayEl) startOverlayEl.classList.remove('hidden');
-  if (pauseBtnEl) pauseBtnEl.classList.remove('active');
+  updatePauseButton(false); // show play icon
 }
 
 function hideStartOverlay() {
   if (startOverlayEl) startOverlayEl.classList.add('hidden');
-  if (pauseBtnEl) pauseBtnEl.classList.add('active');
+  updatePauseButton(true); // show pause icon
+}
+
+// Update pause button icon based on gameActive
+function updatePauseButton(active) {
+  if (!pauseIconEl) return;
+  pauseIconEl.textContent = active ? '⏸' : '▶';
 }

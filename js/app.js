@@ -1,11 +1,12 @@
 // app.js – Jurassic Walk controller
 
 let totalDistanceToday = 0;
+let amberFoundToday = 0;        // placeholder for Stage 2
 let lastSaveTime = 0;
 let wakeLock = null;
 let wakeLockSupported = false;
 let initialPositionSet = false;
-let gameActive = false;          // NEW: distance only accumulates when true
+let gameActive = false;
 
 const SAVE_INTERVAL = 5000;
 
@@ -22,11 +23,12 @@ async function initApp() {
   try {
     await openDB();
   } catch (e) {
-    showError('Storage not available. Progress won\'t be saved.');
+    showError('Storage not available.');
   }
 
   await loadSavedState();
   updateDistanceDisplay(totalDistanceToday);
+  updateAmberDisplay(amberFoundToday);
 
   wakeLockSupported = 'wakeLock' in navigator;
   if (wakeLockSupported) {
@@ -38,7 +40,6 @@ async function initApp() {
   onErrorCallback = handleGeoError;
 
   getInitialPosition();
-  // Don't show PWA prompt immediately; it will appear via beforeinstallprompt
 }
 
 function getInitialPosition() {
@@ -54,7 +55,8 @@ function getInitialPosition() {
       const started = startTracking();
       if (!started) showError('Could not start location tracking');
 
-      // Show start overlay – game is not active yet
+      // Game starts paused – show overlay, pause button shows play icon
+      gameActive = false;
       showStartOverlay();
       initialPositionSet = true;
     },
@@ -72,12 +74,12 @@ function handlePositionUpdate(data) {
   if (!data) return;
   const { latitude, longitude, heading, distance } = data;
 
-  // Always update map position (arrow, trail)
+  // Always update map
   if (initialPositionSet && latitude != null && longitude != null) {
     updateUserPosition(latitude, longitude, heading);
   }
 
-  // Only accumulate distance when game is active
+  // Accumulate distance only when active
   if (gameActive && distance > 0) {
     totalDistanceToday += distance;
     updateDistanceDisplay(totalDistanceToday);
@@ -90,20 +92,26 @@ function handlePositionUpdate(data) {
   }
 }
 
-// Called when START WALK button is pressed
+// Called when START WALK button pressed
 function startGame() {
   gameActive = true;
   hideStartOverlay();
   showToast('Walk started! 🦕');
-  console.log('[App] Game active');
 }
 
-// Called when pause button is pressed
-function pauseGame() {
-  gameActive = false;
-  showStartOverlay();
-  showToast('Walk paused');
-  console.log('[App] Game paused');
+// Called when pause button toggled
+function togglePause() {
+  if (gameActive) {
+    // Pause
+    gameActive = false;
+    showStartOverlay();
+    showToast('Walk paused');
+  } else {
+    // Resume (same as startGame but without the toast maybe)
+    gameActive = true;
+    hideStartOverlay();
+    showToast('Walk resumed 🦕');
+  }
 }
 
 function handleGeoError(msg) {
@@ -114,6 +122,7 @@ async function saveCurrentState() {
   try {
     const state = {
       totalDistanceToday,
+      amberFoundToday,
       lastDate: new Date().toISOString(),
       trailPoints: getTrailCoordinates()
     };
@@ -129,11 +138,14 @@ async function loadSavedState() {
     gameState = await loadGameState();
     if (isNewDay(gameState.lastDate)) {
       totalDistanceToday = 0;
+      amberFoundToday = 0;
     } else {
       totalDistanceToday = gameState.totalDistanceToday || 0;
+      amberFoundToday = gameState.amberFoundToday || 0;
     }
   } catch (e) {
     totalDistanceToday = 0;
+    amberFoundToday = 0;
   }
 }
 

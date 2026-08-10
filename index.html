@@ -18,15 +18,21 @@
   <!-- Map container -->
   <div id="map"></div>
 
-  <!-- Distance panel (bottom left) -->
-  <div id="distance-panel">
-    <span id="distance-value">0</span>
-    <span id="distance-unit">m</span>
-    <span id="distance-label">today</span>
+  <!-- Bottom bar: amber | distance | pause -->
+  <div id="bottom-bar">
+    <div class="bb-item" id="bb-amber">
+      <span class="bb-icon">🟠</span>
+      <span class="bb-value" id="amber-count">0</span>
+      <span class="bb-label">amber</span>
+    </div>
+    <button class="bb-item bb-tappable" id="bb-distance" data-action="stats" disabled>
+      <span class="bb-value" id="distance-value">0</span>
+      <span class="bb-label">m today</span>
+    </button>
+    <button class="bb-item" id="bb-pause">
+      <span class="bb-icon">▶</span>
+    </button>
   </div>
-
-  <!-- Pause button (top left, hidden until game starts) -->
-  <button id="pause-btn" title="Pause walk">⏸</button>
 
   <!-- Start walk overlay (full screen) -->
   <div id="start-overlay">

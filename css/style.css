@@ -30,46 +30,79 @@ html, body {
   opacity: 0.4;
 }
 
-/* === Distance Panel (bottom left) === */
-#distance-panel {
+/* === Bottom Bar === */
+#bottom-bar {
   position: fixed;
-  bottom: 30px;
-  left: 20px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
   background: rgba(0, 0, 0, 0.75);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  color: #fff;
-  padding: 12px 20px;
-  border-radius: 20px;
-  z-index: 1000;
   display: flex;
-  align-items: baseline;
-  gap: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  border: 2px solid rgba(255, 183, 77, 0.5);
-  transition: transform 0.2s ease;
+  align-items: center;
+  justify-content: space-around;
+  z-index: 1000;
+  border-top: 2px solid rgba(255, 183, 77, 0.4);
+  padding: 0 8px;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
 }
 
-#distance-value {
-  font-size: 2em;
-  font-weight: 700;
+.bb-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  color: #fff;
+  font-size: 0.85em;
+  background: none;
+  border: none;
+  cursor: default;
+  padding: 4px;
+  height: 100%;
+}
+
+.bb-item:active {
+  opacity: 0.7;
+}
+
+/* Tappable items (distance stats – future) */
+.bb-tappable {
+  cursor: pointer;
+}
+
+.bb-tappable:disabled {
+  cursor: default;
+  opacity: 0.6; /* visually indicate not yet active */
+}
+
+.bb-icon {
+  font-size: 20px;
   line-height: 1;
-  font-variant-numeric: tabular-nums;
 }
 
-#distance-unit {
-  font-size: 0.9em;
-  font-weight: 500;
-  opacity: 0.8;
-  margin-right: 6px;
+.bb-value {
+  font-size: 1.1em;
+  font-weight: 700;
+  line-height: 1.2;
 }
 
-#distance-label {
-  font-size: 0.7em;
-  font-weight: 400;
-  opacity: 0.6;
+.bb-label {
+  font-size: 0.6em;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  opacity: 0.7;
+}
+
+/* Pause button specific */
+#bb-pause {
+  cursor: pointer;
+}
+
+#bb-pause .bb-icon {
+  font-size: 24px;
 }
 
 /* === Start Overlay (full screen) === */
@@ -136,35 +169,6 @@ html, body {
 #start-btn:active {
   transform: scale(0.95);
   box-shadow: 0 2px 10px rgba(255,143,0,0.6);
-}
-
-/* === Pause Button === */
-#pause-btn {
-  position: fixed;
-  top: 20px;
-  left: 20px;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: rgba(0,0,0,0.6);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  color: #fff;
-  border: 2px solid rgba(255,255,255,0.3);
-  font-size: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1100;
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  pointer-events: none;
-}
-
-#pause-btn.active {
-  opacity: 1;
-  pointer-events: auto;
 }
 
 /* === Toast Notification === */
