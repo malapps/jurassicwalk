@@ -1,9 +1,13 @@
-// map.js – Map display and user marker management
+// map.js – Map display and user marker management (with trail smoothing)
 
 let map = null;
 let userMarker = null;
 let trailPolyline = null;
-let trailCoordinates = [];
+let trailCoordinates = [];       // Raw points (for saving state)
+let smoothTrailCoordinates = []; // Smoothed points (for display)
+let recentRawPoints = [];        // Buffer for moving average
+
+const SMOOTHING_WINDOW = 4;      // Number of raw points to average
 
 const MAP_OPTIONS = {
   zoom: 18,
@@ -34,7 +38,7 @@ function initMap(latitude, longitude) {
     zIndexOffset: 1000
   }).addTo(map);
 
-    // Solid trail
+  // Solid trail (smoothed)
   trailPolyline = L.polyline([], {
     color: '#D35400',
     weight: 3,
@@ -67,9 +71,13 @@ function createArrowIcon() {
   });
 }
 
+/**
+ * Update the user's position and add smoothed trail point
+ */
 function updateUserPosition(latitude, longitude, heading) {
   if (!map || !userMarker) return;
   try {
+    // Update arrow marker (always uses raw position for accuracy)
     userMarker.setLatLng([latitude, longitude]);
 
     const arrowElement = userMarker.getElement();
@@ -80,25 +88,72 @@ function updateUserPosition(latitude, longitude, heading) {
       }
     }
 
+    // Store raw point
     trailCoordinates.push([latitude, longitude]);
-    trailPolyline.setLatLngs(trailCoordinates);
 
+    // Smoothing: moving average of recent raw points
+    recentRawPoints.push({ lat: latitude, lng: longitude });
+
+    // Keep buffer size limited
+    if (recentRawPoints.length > SMOOTHING_WINDOW) {
+      recentRawPoints.shift();
+    }
+
+    // Calculate smoothed position
+    const sumLat = recentRawPoints.reduce((s, p) => s + p.lat, 0);
+    const sumLng = recentRawPoints.reduce((s, p) => s + p.lng, 0);
+    const smoothLat = sumLat / recentRawPoints.length;
+    const smoothLng = sumLng / recentRawPoints.length;
+
+    smoothTrailCoordinates.push([smoothLat, smoothLng]);
+
+    // Update displayed trail with smoothed points
+    trailPolyline.setLatLngs(smoothTrailCoordinates);
+
+    // Pan map to raw position (so arrow is centred)
     map.panTo([latitude, longitude], { animate: true, duration: 0.5 });
   } catch (e) {
     console.error('[Map] Error:', e);
   }
 }
 
+/**
+ * Return the RAW trail coordinates (for saving state accurately)
+ */
 function getTrailCoordinates() {
   return [...trailCoordinates];
 }
 
+/**
+ * Restore trail from saved raw coordinates — rebuild smoothed version
+ */
 function restoreTrail(coordinates) {
   if (!trailPolyline || !map) return;
+
   trailCoordinates = coordinates || [];
-  trailPolyline.setLatLngs(trailCoordinates);
+  smoothTrailCoordinates = [];
+  recentRawPoints = [];
+
+  // Rebuild smoothed trail from saved raw coordinates
+  for (let i = 0; i < trailCoordinates.length; i++) {
+    const [lat, lng] = trailCoordinates[i];
+    recentRawPoints.push({ lat, lng });
+    if (recentRawPoints.length > SMOOTHING_WINDOW) {
+      recentRawPoints.shift();
+    }
+    const sumLat = recentRawPoints.reduce((s, p) => s + p.lat, 0);
+    const sumLng = recentRawPoints.reduce((s, p) => s + p.lng, 0);
+    smoothTrailCoordinates.push([
+      sumLat / recentRawPoints.length,
+      sumLng / recentRawPoints.length
+    ]);
+  }
+
+  trailPolyline.setLatLngs(smoothTrailCoordinates);
+
   if (trailCoordinates.length > 0) {
-    map.panTo(trailCoordinates[trailCoordinates.length - 1]);
+    const last = trailCoordinates[trailCoordinates.length - 1];
+    map.panTo(last);
   }
 }
 

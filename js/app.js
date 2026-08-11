@@ -3,7 +3,7 @@
 let totalDistanceToday = 0;
 let amberFoundToday = 0;
 let distanceSinceLastAmber = 0;
-let nextAmberThreshold = 1500; // will be overwritten by saved state
+let nextAmberThreshold = 100; // will be overwritten by saved state
 let lastSaveTime = 0;
 let wakeLock = null;
 let wakeLockSupported = false;

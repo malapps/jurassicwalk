@@ -1,16 +1,16 @@
 // geo.js – Geolocation tracking and distance calculation
 
 const EARTH_RADIUS_METRES = 6371000;
-const MIN_DISTANCE_THRESHOLD = 1.0;      // min metres to count as movement
-const MAX_JUMP_THRESHOLD = 100;          // ignore GPS glitches
-const HEADING_UPDATE_MIN_DIST = 2.0;     // only update arrow if moved ≥ 2m
+const MIN_DISTANCE_THRESHOLD = 0.5;      // Anti-jitter
+const MAX_JUMP_THRESHOLD = 30;           // Anti-drift: max sudden jump in metres
+const MAX_WALKING_SPEED = 27.0;           // m/s — brisk walking pace
+const HEADING_UPDATE_MIN_DIST = 0.8;     // Anti-spin
 
 let watchId = null;
 let lastPosition = null;
 let trackingActive = false;
-let lastHeading = 0;                     // smooth bearing memory
+let lastHeading = 0;
 
-// Callbacks (set by app.js)
 let onPositionUpdateCallback = null;
 let onErrorCallback = null;
 
@@ -53,7 +53,7 @@ function geoWatchSuccess(position) {
   if (latitude == null || longitude == null) return;
 
   let distance = 0;
-  let bearing = lastHeading; // default to current direction
+  let bearing = lastHeading;
 
   if (lastPosition) {
     distance = haversineDistance(
@@ -61,25 +61,32 @@ function geoWatchSuccess(position) {
       latitude, longitude
     );
 
-    // Filter unrealistic jumps
-    if (distance > MAX_JUMP_THRESHOLD) {
-      return; // throw away this update
+    // Time-aware anti-drift
+    const timeGap = (position.timestamp - lastPosition.timestamp) / 1000; // seconds
+    const maxAcceptableDistance = Math.max(
+      MAX_JUMP_THRESHOLD,                          // At least 30m
+      timeGap * MAX_WALKING_SPEED                  // Plus distance walkable in the time gap
+    );
+
+    if (distance > maxAcceptableDistance) {
+      console.warn('[Geo] Rejecting jump:', distance.toFixed(1), 'm in', timeGap.toFixed(1), 's (max:', maxAcceptableDistance.toFixed(1), 'm)');
+      return;
     }
 
+    // Anti-spin: only update bearing when we've moved at least 0.8m
     if (distance >= HEADING_UPDATE_MIN_DIST) {
-      // Only update bearing when we've actually moved enough
       bearing = calculateBearing(
         lastPosition.latitude, lastPosition.longitude,
         latitude, longitude
       );
-      lastHeading = bearing; // remember for when stationary
+      lastHeading = bearing;
     }
 
+    // Anti-jitter: don't count movements under 0.5m
     if (distance < MIN_DISTANCE_THRESHOLD) {
-      distance = 0; // don't add tiny jitter to daily total
+      distance = 0;
     }
   } else {
-    // First ever fix – we can't calculate bearing yet
     bearing = 0;
   }
 
