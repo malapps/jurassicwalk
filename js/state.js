@@ -73,6 +73,6 @@ function isNewDay(lastDateStr) {
 /** Generate a random distance threshold with exponential distribution (mean 1500 m) */
 function generateAmberThreshold() {
   // Exponential: -mean * ln(1 - random)
-  const mean = 1500;
+  const mean = 10;
   return Math.round(-mean * Math.log(1 - Math.random()));
 }
