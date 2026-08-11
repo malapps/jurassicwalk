@@ -20,14 +20,12 @@
 
   <!-- Floating bottom controls -->
   <div id="bottom-controls">
-    <!-- Amber panel (unchanged) -->
     <div id="amber-panel" class="bottom-panel">
       <span class="bb-icon">🟠</span>
       <span class="bb-value" id="amber-count">0</span>
       <span class="bb-label">amber</span>
     </div>
 
-    <!-- Combined distance + pause panel -->
     <div id="distance-pause-panel" class="bottom-panel">
       <div id="distance-part">
         <span class="bb-value" id="distance-value">0 m</span>
@@ -40,7 +38,16 @@
     </div>
   </div>
 
-  <!-- Start walk overlay (full screen) -->
+  <!-- Lab results modal (hidden by default) -->
+  <div id="lab-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h2>🔬 Lab Results</h2>
+      <div id="lab-content"></div>
+      <button id="lab-close-btn">CONTINUE</button>
+    </div>
+  </div>
+
+  <!-- Start walk overlay -->
   <div id="start-overlay">
     <div id="start-card">
       <div id="start-icon">🦕</div>
@@ -50,7 +57,7 @@
     </div>
   </div>
 
-  <!-- Load scripts -->
+  <!-- Scripts -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="js/state.js"></script>
   <script src="js/geo.js"></script>

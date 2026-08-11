@@ -7,9 +7,11 @@ let statusBarEl;
 let statusTextEl;
 let toastEl;
 let startOverlayEl;
+let labModalEl;
+let labContentEl;
+let labCloseBtnEl;
 let statusTimeout = null;
 let toastTimeout = null;
-
 let deferredPrompt = null;
 
 function initUI() {
@@ -19,33 +21,34 @@ function initUI() {
   statusBarEl = document.getElementById('status-bar');
   statusTextEl = document.getElementById('status-text');
   startOverlayEl = document.getElementById('start-overlay');
+  labModalEl = document.getElementById('lab-modal');
+  labContentEl = document.getElementById('lab-content');
+  labCloseBtnEl = document.getElementById('lab-close-btn');
 
-  // Toast element
   toastEl = document.createElement('div');
   toastEl.id = 'toast';
   document.body.appendChild(toastEl);
 
-  // PWA install prompt
   createPWAPrompt();
 
-  // Start button
   document.getElementById('start-btn').addEventListener('click', () => {
     if (typeof startGame === 'function') startGame();
   });
 
-  // Pause button (now inside the combined pill)
   document.getElementById('pause-part').addEventListener('click', () => {
     if (typeof togglePause === 'function') togglePause();
   });
 
-  // beforeinstallprompt
+  labCloseBtnEl.addEventListener('click', () => {
+    hideLabModal();
+  });
+
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
     showPWAPrompt();
   });
 
-  // Stats placeholder (tap distance part)
   const distancePart = document.getElementById('distance-part');
   if (distancePart) {
     distancePart.addEventListener('click', () => {
@@ -87,7 +90,7 @@ function hidePWAPrompt() {
   if (prompt) prompt.classList.remove('show');
 }
 
-function showToast(message, duration = 3000) {
+function showToast(message, duration = 5000) {
   if (!toastEl) return;
   if (toastTimeout) clearTimeout(toastTimeout);
   toastEl.textContent = message;
@@ -95,9 +98,6 @@ function showToast(message, duration = 3000) {
   toastTimeout = setTimeout(() => toastEl.classList.remove('show'), duration);
 }
 
-/**
- * Update distance display – automatically switches to km if ≥10000 m
- */
 function updateDistanceDisplay(totalMetres) {
   if (!distanceValueEl) return;
   if (totalMetres >= 10000) {
@@ -137,15 +137,31 @@ function showError(message) {
   statusTimeout = setTimeout(() => hideStatus(), 8000);
 }
 
+// Lab modal
+function showLabModal(htmlContent) {
+  if (!labModalEl || !labContentEl) return;
+  labContentEl.innerHTML = htmlContent;
+  labModalEl.classList.remove('hidden');
+}
+
+function hideLabModal() {
+  if (!labModalEl) return;
+  labModalEl.classList.add('hidden');
+  // After closing lab, show start overlay if game not active
+  if (typeof gameActive !== 'undefined' && !gameActive) {
+    showStartOverlay();
+  }
+}
+
 // Game state UI controls
 function showStartOverlay() {
   if (startOverlayEl) startOverlayEl.classList.remove('hidden');
-  updatePauseButton(false); // show play icon
+  updatePauseButton(false);
 }
 
 function hideStartOverlay() {
   if (startOverlayEl) startOverlayEl.classList.add('hidden');
-  updatePauseButton(true); // show pause icon
+  updatePauseButton(true);
 }
 
 function updatePauseButton(active) {

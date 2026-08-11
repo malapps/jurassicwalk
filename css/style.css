@@ -122,7 +122,7 @@ html, body {
 .split-line {
   width: 0;
   height: 32px;
-  border-left: 2px dashed rgba(255, 255, 255, 0.7);
+  border-left: 2px dashed rgba(118, 126, 135, 0.7);
   align-self: center;
   margin: 0 4px;
 }
@@ -321,6 +321,81 @@ html, body {
   height: 34px !important;
   line-height: 34px !important;
   font-size: 18px !important;
+}
+
+/* ===== Lab Results Modal ===== */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 6000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.3s ease;
+}
+
+.modal-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.modal-card {
+  background: #fff;
+  border-radius: 24px;
+  padding: 30px 24px;
+  max-width: 340px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+  color: #000;
+  font-size: 0.95em;
+  line-height: 1.5;
+}
+
+.modal-card h2 {
+  color: #334086;
+  font-size: 1.5em;
+  margin-bottom: 16px;
+}
+
+#lab-content {
+  text-align: left;
+  margin-bottom: 20px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+#lab-content p {
+  margin: 8px 0;
+}
+
+#lab-content .positive {
+  color: #1B5E20;
+  font-weight: 600;
+}
+
+#lab-content .negative {
+  color: #888;
+}
+
+#lab-close-btn {
+  background: #334086;
+  color: #fff;
+  border: none;
+  padding: 12px 32px;
+  font-size: 1em;
+  font-weight: 700;
+  border-radius: 30px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(51, 64, 134, 0.3);
+  transition: transform 0.2s;
+}
+
+#lab-close-btn:active {
+  transform: scale(0.95);
 }
 
 /* === Landscape warning === */

@@ -2,9 +2,6 @@
 
 const STORAGE_PREFIX = 'jwalk_';
 
-/**
- * Save a single value to localStorage
- */
 function saveValue(key, value) {
   try {
     localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(value));
@@ -14,9 +11,6 @@ function saveValue(key, value) {
   }
 }
 
-/**
- * Load a single value from localStorage
- */
 function loadValue(key) {
   try {
     const raw = localStorage.getItem(STORAGE_PREFIX + key);
@@ -27,35 +21,37 @@ function loadValue(key) {
   }
 }
 
-/**
- * Save the full game state
- */
 async function saveGameState(state) {
   saveValue('totalDistanceToday', state.totalDistanceToday);
+  saveValue('amberFoundToday', state.amberFoundToday);
   saveValue('lastDate', state.lastDate);
   saveValue('trailPoints', state.trailPoints);
+  saveValue('amberPieces', state.amberPieces);
+  saveValue('distanceSinceLastAmber', state.distanceSinceLastAmber);
+  saveValue('nextAmberThreshold', state.nextAmberThreshold);
 }
 
-/**
- * Load the full game state
- */
 async function loadGameState() {
   const totalDistanceToday = loadValue('totalDistanceToday') || 0;
+  const amberFoundToday = loadValue('amberFoundToday') || 0;
   const lastDate = loadValue('lastDate') || null;
   const trailPoints = loadValue('trailPoints') || [];
-  
+  const amberPieces = loadValue('amberPieces') || [];
+  const distanceSinceLastAmber = loadValue('distanceSinceLastAmber') || 0;
+  const nextAmberThreshold = loadValue('nextAmberThreshold') || generateAmberThreshold();
+
   return {
     totalDistanceToday,
+    amberFoundToday,
     lastDate,
-    trailPoints
+    trailPoints,
+    amberPieces,
+    distanceSinceLastAmber,
+    nextAmberThreshold
   };
 }
 
-/**
- * Initialise storage – now just a compatibility check
- */
 async function openDB() {
-  // localStorage is always available; just test it
   try {
     localStorage.setItem('jwalk_test', '1');
     localStorage.removeItem('jwalk_test');
@@ -67,14 +63,16 @@ async function openDB() {
   }
 }
 
-/**
- * Check if it's a new day
- */
 function isNewDay(lastDateStr) {
   if (!lastDateStr) return true;
-  
   const last = new Date(lastDateStr);
   const now = new Date();
-  
   return last.toDateString() !== now.toDateString();
+}
+
+/** Generate a random distance threshold with exponential distribution (mean 1500 m) */
+function generateAmberThreshold() {
+  // Exponential: -mean * ln(1 - random)
+  const mean = 1500;
+  return Math.round(-mean * Math.log(1 - Math.random()));
 }

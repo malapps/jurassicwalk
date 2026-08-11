@@ -1,14 +1,25 @@
-// app.js – Jurassic Walk controller
+// app.js – Jurassic Walk controller (Stage 2)
 
 let totalDistanceToday = 0;
-let amberFoundToday = 0;        // placeholder for Stage 2
+let amberFoundToday = 0;
+let distanceSinceLastAmber = 0;
+let nextAmberThreshold = 1500; // will be overwritten by saved state
 let lastSaveTime = 0;
 let wakeLock = null;
 let wakeLockSupported = false;
 let initialPositionSet = false;
 let gameActive = false;
+let amberPieces = [];          // all-time collection
 
 const SAVE_INTERVAL = 5000;
+
+// Dinosaur lists
+const BRONZE = ['Hypsilophodon','Dryosaurus','Lesothosaurus','Iguanodon','Pachycephalosaurus','Gallimimus','Maiasaura','Scelidosaurus','Parasaurolophus'];
+const SILVER = ['Allosaurus','Carnotaurus','Ankylosaurus','Stegosaurus','Corythosaurus','Dilophosaurus','Baryonyx','Megalosaurus','Diplodocus','Pteranodon','Brachiosaurus'];
+const GOLD = ['Tyrannosaurus rex','Velociraptor','Spinosaurus','Giganotosaurus','Triceratops','Deinonychus','Quetzalcoatlus','Argentinosaurus'];
+
+// Audio context for ping
+let audioCtx = null;
 
 window.onerror = function(msg, src, lineno) {
   console.error('Error:', msg, 'at', src, lineno);
@@ -20,11 +31,7 @@ async function initApp() {
   console.log('[App] Starting Jurassic Walk...');
   initUI();
 
-  try {
-    await openDB();
-  } catch (e) {
-    showError('Storage not available.');
-  }
+  try { await openDB(); } catch (e) { showError('Storage not available.'); }
 
   await loadSavedState();
   updateDistanceDisplay(totalDistanceToday);
@@ -39,6 +46,20 @@ async function initApp() {
   onPositionUpdateCallback = handlePositionUpdate;
   onErrorCallback = handleGeoError;
 
+  // Check for new day → show lab results BEFORE anything else
+  if (isNewDay(gameState?.lastDate)) {
+    const newPieces = processLabResults();
+    if (newPieces.length > 0) {
+      showLabModal(buildLabHTML(newPieces));
+      // start overlay will appear after user dismisses lab modal
+    } else {
+      showStartOverlay();
+    }
+    // Daily counters already reset in loadSavedState
+  } else {
+    showStartOverlay();
+  }
+
   getInitialPosition();
 }
 
@@ -47,17 +68,13 @@ function getInitialPosition() {
     (pos) => {
       const { latitude, longitude } = pos.coords;
       initMap(latitude, longitude);
-
       if (gameState && gameState.trailPoints && gameState.trailPoints.length > 0) {
         restoreTrail(gameState.trailPoints);
       }
-
       const started = startTracking();
       if (!started) showError('Could not start location tracking');
 
-      // Game starts paused – show overlay, pause button shows play icon
       gameActive = false;
-      showStartOverlay();
       initialPositionSet = true;
     },
     (err) => {
@@ -74,15 +91,19 @@ function handlePositionUpdate(data) {
   if (!data) return;
   const { latitude, longitude, heading, distance } = data;
 
-  // Always update map
   if (initialPositionSet && latitude != null && longitude != null) {
     updateUserPosition(latitude, longitude, heading);
   }
 
-  // Accumulate distance only when active
   if (gameActive && distance > 0) {
     totalDistanceToday += distance;
+    distanceSinceLastAmber += distance;
     updateDistanceDisplay(totalDistanceToday);
+
+    // Check for amber discovery
+    if (distanceSinceLastAmber >= nextAmberThreshold) {
+      discoverAmber();
+    }
   }
 
   const now = Date.now();
@@ -92,22 +113,143 @@ function handlePositionUpdate(data) {
   }
 }
 
-// Called when START WALK button pressed
+function discoverAmber() {
+  // Increment today's counter
+  amberFoundToday++;
+  updateAmberDisplay(amberFoundToday);
+
+  // Create new amber piece
+  const piece = createAmberPiece();
+  amberPieces.push(piece);
+
+  // Reset threshold
+  distanceSinceLastAmber = 0;
+  nextAmberThreshold = generateAmberThreshold();
+
+  // Sound
+  playPing();
+
+  // Toast
+  showToast('🟠 Amber found! Sent to lab. Results tomorrow.', 5000);
+
+  saveCurrentState();
+}
+
+function createAmberPiece() {
+  const id = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+  // 30% chance of DNA
+  const hasDNA = Math.random() < 0.3;
+  let level = null;
+  let species = null;
+
+  if (hasDNA) {
+    // Determine level & species using given probabilities
+    const rand = Math.random();
+    // Bronze: 9 species * 3.8% = 34.2% cumulative
+    // Silver: 11 species * 3.8% = 41.8% cumulative (76% total)
+    // Gold: 8 species * 3% = 24% cumulative (100% total)
+    if (rand < 0.342) {
+      level = 'Bronze';
+      species = BRONZE[Math.floor(Math.random() * BRONZE.length)];
+    } else if (rand < 0.76) {
+      level = 'Silver';
+      species = SILVER[Math.floor(Math.random() * SILVER.length)];
+    } else {
+      level = 'Gold';
+      species = GOLD[Math.floor(Math.random() * GOLD.length)];
+    }
+  }
+
+  return {
+    id,
+    dateFound: today,
+    analyzed: false,
+    hasDNA,
+    level,
+    species
+  };
+}
+
+/** Process all unanalyzed amber pieces from previous days, mark analyzed, return new positives */
+function processLabResults() {
+  const today = new Date().toISOString().split('T')[0];
+  const newPositives = [];
+
+  amberPieces.forEach(piece => {
+    if (!piece.analyzed && piece.dateFound < today) {
+      piece.analyzed = true;
+      if (piece.hasDNA) {
+        newPositives.push(piece);
+      }
+    }
+  });
+
+  saveCurrentState();
+  return newPositives;
+}
+
+function buildLabHTML(newPieces) {
+  if (newPieces.length === 0) {
+    return '<p>No new dinosaur DNA found.</p>';
+  }
+
+  let html = `<p>${newPieces.length} amber piece(s) contained DNA!</p>`;
+  html += '<ul style="list-style:none;padding:0;">';
+  newPieces.forEach(p => {
+    html += `<li class="positive">🟠 ${p.level} level dinosaur DNA detected</li>`;
+  });
+  html += '</ul>';
+  html += '<p>Incubate them to discover the exact species!</p>';
+  return html;
+}
+
+// Web Audio ping
+function playPing() {
+  if (!audioCtx) {
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    } catch (e) {
+      console.warn('Audio not available');
+      return;
+    }
+  }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+
+  const now = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(800, now);
+  osc.frequency.linearRampToValueAtTime(1000, now + 0.15);
+  osc.frequency.linearRampToValueAtTime(600, now + 0.3);
+
+  gain.gain.setValueAtTime(0.3, now);
+  gain.gain.linearRampToValueAtTime(0, now + 0.35);
+
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start(now);
+  osc.stop(now + 0.35);
+}
+
+// Game controls
 function startGame() {
   gameActive = true;
   hideStartOverlay();
   showToast('Walk started! 🦕');
 }
 
-// Called when pause button toggled
 function togglePause() {
   if (gameActive) {
-    // Pause
     gameActive = false;
     showStartOverlay();
     showToast('Walk paused');
   } else {
-    // Resume (same as startGame but without the toast maybe)
     gameActive = true;
     hideStartOverlay();
     showToast('Walk resumed 🦕');
@@ -124,7 +266,10 @@ async function saveCurrentState() {
       totalDistanceToday,
       amberFoundToday,
       lastDate: new Date().toISOString(),
-      trailPoints: getTrailCoordinates()
+      trailPoints: getTrailCoordinates(),
+      amberPieces,
+      distanceSinceLastAmber,
+      nextAmberThreshold
     };
     await saveGameState(state);
     gameState = state;
@@ -137,15 +282,25 @@ async function loadSavedState() {
   try {
     gameState = await loadGameState();
     if (isNewDay(gameState.lastDate)) {
+      // New day: reset daily counters but keep amberPieces and thresholds
       totalDistanceToday = 0;
       amberFoundToday = 0;
+      distanceSinceLastAmber = 0;
+      nextAmberThreshold = generateAmberThreshold();
+      amberPieces = gameState.amberPieces || [];
     } else {
       totalDistanceToday = gameState.totalDistanceToday || 0;
       amberFoundToday = gameState.amberFoundToday || 0;
+      distanceSinceLastAmber = gameState.distanceSinceLastAmber || 0;
+      nextAmberThreshold = gameState.nextAmberThreshold || generateAmberThreshold();
+      amberPieces = gameState.amberPieces || [];
     }
   } catch (e) {
     totalDistanceToday = 0;
     amberFoundToday = 0;
+    distanceSinceLastAmber = 0;
+    nextAmberThreshold = generateAmberThreshold();
+    amberPieces = [];
   }
 }
 
