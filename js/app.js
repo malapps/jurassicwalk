@@ -53,30 +53,26 @@ async function initApp() {
     }
   }
 
-  // Show a "getting location" message
-  showToast('📍 Getting your location...', 0);
-
-  // Start GPS
+  // Start GPS (no toast here — overlay itself tells the user what to do)
   getInitialPosition();
 }
 
 function getInitialPosition() {
-  // Use a default position (somewhere neutral) so the map always loads
-  // We'll use the last known position or a default
-  const defaultLat = 51.5074;  // London as fallback
+  // Default fallback position — map always loads
+  const defaultLat = 51.5074;
   const defaultLng = -0.1278;
 
-  // Initialise map immediately with fallback position
+  // Initialise map immediately so user always sees a map
   initMap(defaultLat, defaultLng);
 
-  // Now try to get the real position
+  // Now try to get real position
   navigator.geolocation.getCurrentPosition(
     (pos) => {
       const { latitude, longitude } = pos.coords;
 
       console.log('[App] GPS position acquired:', latitude, longitude);
 
-      // Update map to real position
+      // Re-initialise map at real position
       initMap(latitude, longitude);
 
       // Restore trail if available
@@ -91,17 +87,21 @@ function getInitialPosition() {
       initialPositionSet = true;
       gpsReady = true;
 
-      // Show start overlay now that we're ready
-      showStartOverlay();
-      hideToast();
+      // If user hasn't started yet, show overlay
+      if (!gameActive) {
+        showStartOverlay();
+      }
 
+      hideToast();
       console.log('[App] Ready to walk');
     },
     (err) => {
       console.error('[App] Failed to get initial position:', err);
       showError('Could not get your location. Check GPS and permissions.');
-      // Still show the start overlay but warn the user
-      showStartOverlay();
+      // Still show overlay so user can at least see the app
+      if (!gameActive) {
+        showStartOverlay();
+      }
       hideToast();
     },
     { enableHighAccuracy: true, timeout: 20000, maximumAge: 60000 }
@@ -312,13 +312,14 @@ function playAmberDiscovery() {
 }
 
 function startGame() {
-  if (!gpsReady) {
-    showToast('📍 Waiting for GPS signal...', 3000);
-    return;
-  }
   gameActive = true;
   hideStartOverlay();
-  showToast('Walk started! 🦕');
+
+  if (gpsReady) {
+    showToast('Walk started! 🦕');
+  } else {
+    showToast('Walk started!\nWaiting for GPS signal...', 4000);
+  }
 }
 
 function togglePause() {
