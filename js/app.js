@@ -18,8 +18,8 @@ const BRONZE = ['Hypsilophodon','Dryosaurus','Lesothosaurus','Iguanodon','Pachyc
 const SILVER = ['Allosaurus','Carnotaurus','Ankylosaurus','Stegosaurus','Corythosaurus','Dilophosaurus','Baryonyx','Megalosaurus','Diplodocus','Pteranodon','Brachiosaurus'];
 const GOLD = ['Tyrannosaurus rex','Velociraptor','Spinosaurus','Giganotosaurus','Triceratops','Deinonychus','Quetzalcoatlus','Argentinosaurus'];
 
-// Audio context for amber found sound
-let amberAudioCtx = null;
+// Audio context for amber discovery sound
+let amberAudioContext = null;
 
 window.onerror = function(msg, src, lineno) {
   console.error('Error:', msg, 'at', src, lineno);
@@ -119,7 +119,7 @@ function discoverAmber() {
   distanceSinceLastAmber = 0;
   nextAmberThreshold = generateAmberThreshold();
 
-  playAmberSound();
+  playAmberDiscovery();
   showToast('🟠 Amber found!\n-\nSent to lab for analysis.\n-\nResults announced tomorrow..', 15000);
 
   saveCurrentState();
@@ -190,9 +190,11 @@ function buildLabHTML(newPieces) {
 }
 
 /**
- * Retro 8-bit victory jingle for amber discovery
+ * Retro harp-like "amber discovered" sound
+ * Ascending major arpeggio with sparkle harmonics
+ * Approximately 2 seconds long
  */
-function playAmberSound() {
+function playAmberDiscovery() {
   const AudioContext = window.AudioContext || window.webkitAudioContext;
 
   if (!AudioContext) {
@@ -200,63 +202,97 @@ function playAmberSound() {
     return;
   }
 
-  if (!amberAudioCtx) {
-    amberAudioCtx = new AudioContext();
+  if (!amberAudioContext) {
+    amberAudioContext = new AudioContext();
   }
 
-  const ctx = amberAudioCtx;
+  const ctx = amberAudioContext;
 
-  // Resume if suspended (browsers require user gesture)
   if (ctx.state === 'suspended') {
     ctx.resume();
   }
 
   const now = ctx.currentTime;
 
-  // Master output
+  // Master volume
   const master = ctx.createGain();
-  master.gain.setValueAtTime(0.0, now);
-  master.gain.linearRampToValueAtTime(0.65, now + 0.008);
-  master.gain.setValueAtTime(0.65, now + 0.52);
-  master.gain.exponentialRampToValueAtTime(0.001, now + 0.66);
+  master.gain.setValueAtTime(0.0001, now);
+  master.gain.linearRampToValueAtTime(0.55, now + 0.015);
+  master.gain.setValueAtTime(0.55, now + 1.65);
+  master.gain.exponentialRampToValueAtTime(0.0001, now + 2.0);
   master.connect(ctx.destination);
 
-  // Note sequence: C5 → E5 → G5 → A5 → C6 → A5 → G5 → C6
+  // Ascending major arpeggio
   const notes = [
-    { frequency: 523.25, duration: 0.070 },   // C5
-    { frequency: 659.25, duration: 0.070 },   // E5
-    { frequency: 783.99, duration: 0.070 },   // G5
-    { frequency: 880.00, duration: 0.070 },   // A5
-    { frequency: 1046.50, duration: 0.070 },  // C6
-    { frequency: 880.00, duration: 0.070 },   // A5
-    { frequency: 783.99, duration: 0.070 },   // G5
-    { frequency: 1046.50, duration: 0.120 }   // C6 (held longer)
+    { frequency: 523.25,  time: 0.00 },
+    { frequency: 587.33,  time: 0.12 },
+    { frequency: 659.25,  time: 0.24 },
+    { frequency: 783.99,  time: 0.36 },
+    { frequency: 880.00,  time: 0.48 },
+    { frequency: 1046.50, time: 0.62 },
+    { frequency: 1174.66, time: 0.76 },
+    { frequency: 1318.51, time: 0.90 },
+    { frequency: 1567.98, time: 1.04 },
+    { frequency: 1760.00, time: 1.18 }
   ];
 
-  let t = now;
-
-  for (const note of notes) {
+  // Main plucked notes (triangle wave)
+  notes.forEach(note => {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
+    const start = now + note.time;
 
-    // 8-bit square wave
-    osc.type = 'square';
-    osc.frequency.setValueAtTime(note.frequency, t);
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(note.frequency, start);
 
-    // Per-note envelope
-    gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.linearRampToValueAtTime(0.24, t + 0.004);
-    gain.gain.setValueAtTime(0.24, t + note.duration * 0.72);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + note.duration);
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.linearRampToValueAtTime(0.22, start + 0.006);
+    gain.gain.exponentialRampToValueAtTime(0.001, start + 0.65);
 
     osc.connect(gain);
     gain.connect(master);
 
-    osc.start(t);
-    osc.stop(t + note.duration + 0.005);
+    osc.start(start);
+    osc.stop(start + 0.7);
+  });
 
-    t += note.duration;
-  }
+  // High sparkle harmonics (sine wave, one octave up)
+  notes.forEach(note => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const start = now + note.time;
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(note.frequency * 2, start);
+
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.linearRampToValueAtTime(0.055, start + 0.004);
+    gain.gain.exponentialRampToValueAtTime(0.001, start + 0.45);
+
+    osc.connect(gain);
+    gain.connect(master);
+
+    osc.start(start);
+    osc.stop(start + 0.5);
+  });
+
+  // Final high note (C7)
+  const finalOsc = ctx.createOscillator();
+  const finalGain = ctx.createGain();
+  const finalStart = now + 1.32;
+
+  finalOsc.type = 'triangle';
+  finalOsc.frequency.setValueAtTime(2093.00, finalStart);
+
+  finalGain.gain.setValueAtTime(0.0001, finalStart);
+  finalGain.gain.linearRampToValueAtTime(0.18, finalStart + 0.008);
+  finalGain.gain.exponentialRampToValueAtTime(0.001, finalStart + 0.65);
+
+  finalOsc.connect(finalGain);
+  finalGain.connect(master);
+
+  finalOsc.start(finalStart);
+  finalOsc.stop(finalStart + 0.7);
 }
 
 function startGame() {
