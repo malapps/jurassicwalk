@@ -90,12 +90,17 @@ function hidePWAPrompt() {
   if (prompt) prompt.classList.remove('show');
 }
 
-function showToast(message, duration = 5000) {
+function showToast(message, duration = 15000) {
   if (!toastEl) return;
   if (toastTimeout) clearTimeout(toastTimeout);
-  toastEl.textContent = message;
+  
+  // Convert newlines to <br> for multiline
+  toastEl.innerHTML = message.replace(/\n/g, '<br>');
   toastEl.classList.add('show');
-  toastTimeout = setTimeout(() => toastEl.classList.remove('show'), duration);
+  
+  toastTimeout = setTimeout(() => {
+    toastEl.classList.remove('show');
+  }, duration);
 }
 
 function updateDistanceDisplay(totalMetres) {
@@ -147,7 +152,6 @@ function showLabModal(htmlContent) {
 function hideLabModal() {
   if (!labModalEl) return;
   labModalEl.classList.add('hidden');
-  // After closing lab, show start overlay if game not active
   if (typeof gameActive !== 'undefined' && !gameActive) {
     showStartOverlay();
   }

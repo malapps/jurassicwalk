@@ -119,7 +119,7 @@ function discoverAmber() {
   nextAmberThreshold = generateAmberThreshold();
 
   playPing();
-  showToast('🟠 Amber found! Sent to lab. Results tomorrow.', 5000);
+  showToast('🟠 Amber found!\nSent to lab for analysis.\nResults announced tomorrow..', 15000);
 
   saveCurrentState();
 }
