@@ -10,6 +10,7 @@ let wakeLockSupported = false;
 let initialPositionSet = false;
 let gameActive = false;
 let amberPieces = [];
+let gpsReady = false;
 
 const SAVE_INTERVAL = 5000;
 
@@ -18,7 +19,6 @@ const BRONZE = ['Hypsilophodon','Dryosaurus','Lesothosaurus','Iguanodon','Pachyc
 const SILVER = ['Allosaurus','Carnotaurus','Ankylosaurus','Stegosaurus','Corythosaurus','Dilophosaurus','Baryonyx','Megalosaurus','Diplodocus','Pteranodon','Brachiosaurus'];
 const GOLD = ['Tyrannosaurus rex','Velociraptor','Spinosaurus','Giganotosaurus','Triceratops','Deinonychus','Quetzalcoatlus','Argentinosaurus'];
 
-// Audio context for amber discovery sound
 let amberAudioContext = null;
 
 window.onerror = function(msg, src, lineno) {
@@ -39,44 +39,70 @@ async function initApp() {
 
   wakeLockSupported = 'wakeLock' in navigator;
   if (wakeLockSupported) {
-  await requestWakeLock();
-  // Wake lock works silently — no toast needed
-}
+    await requestWakeLock();
+  }
 
   onPositionUpdateCallback = handlePositionUpdate;
   onErrorCallback = handleGeoError;
 
+  // Check for lab results (new day)
   if (isNewDay(gameState?.lastDate)) {
     const newPieces = processLabResults();
     if (newPieces.length > 0) {
       showLabModal(buildLabHTML(newPieces));
-    } else {
-      showStartOverlay();
     }
-  } else {
-    showStartOverlay();
   }
 
+  // Show a "getting location" message
+  showToast('📍 Getting your location...', 0);
+
+  // Start GPS
   getInitialPosition();
 }
 
 function getInitialPosition() {
+  // Use a default position (somewhere neutral) so the map always loads
+  // We'll use the last known position or a default
+  const defaultLat = 51.5074;  // London as fallback
+  const defaultLng = -0.1278;
+
+  // Initialise map immediately with fallback position
+  initMap(defaultLat, defaultLng);
+
+  // Now try to get the real position
   navigator.geolocation.getCurrentPosition(
     (pos) => {
       const { latitude, longitude } = pos.coords;
+
+      console.log('[App] GPS position acquired:', latitude, longitude);
+
+      // Update map to real position
       initMap(latitude, longitude);
+
+      // Restore trail if available
       if (gameState && gameState.trailPoints && gameState.trailPoints.length > 0) {
         restoreTrail(gameState.trailPoints);
       }
+
+      // Start continuous tracking
       const started = startTracking();
       if (!started) showError('Could not start location tracking');
 
-      gameActive = false;
       initialPositionSet = true;
+      gpsReady = true;
+
+      // Show start overlay now that we're ready
+      showStartOverlay();
+      hideToast();
+
+      console.log('[App] Ready to walk');
     },
     (err) => {
-      showError('Could not get your location.');
-      console.error(err);
+      console.error('[App] Failed to get initial position:', err);
+      showError('Could not get your location. Check GPS and permissions.');
+      // Still show the start overlay but warn the user
+      showStartOverlay();
+      hideToast();
     },
     { enableHighAccuracy: true, timeout: 20000, maximumAge: 60000 }
   );
@@ -189,11 +215,6 @@ function buildLabHTML(newPieces) {
   return html;
 }
 
-/**
- * Retro harp-like "amber discovered" sound
- * Ascending major arpeggio with sparkle harmonics
- * Approximately 2 seconds long
- */
 function playAmberDiscovery() {
   const AudioContext = window.AudioContext || window.webkitAudioContext;
 
@@ -214,7 +235,6 @@ function playAmberDiscovery() {
 
   const now = ctx.currentTime;
 
-  // Master volume
   const master = ctx.createGain();
   master.gain.setValueAtTime(0.0001, now);
   master.gain.linearRampToValueAtTime(0.55, now + 0.015);
@@ -222,7 +242,6 @@ function playAmberDiscovery() {
   master.gain.exponentialRampToValueAtTime(0.0001, now + 2.0);
   master.connect(ctx.destination);
 
-  // Ascending major arpeggio
   const notes = [
     { frequency: 523.25,  time: 0.00 },
     { frequency: 587.33,  time: 0.12 },
@@ -236,7 +255,6 @@ function playAmberDiscovery() {
     { frequency: 1760.00, time: 1.18 }
   ];
 
-  // Main plucked notes (triangle wave)
   notes.forEach(note => {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
@@ -256,7 +274,6 @@ function playAmberDiscovery() {
     osc.stop(start + 0.7);
   });
 
-  // High sparkle harmonics (sine wave, one octave up)
   notes.forEach(note => {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
@@ -276,7 +293,6 @@ function playAmberDiscovery() {
     osc.stop(start + 0.5);
   });
 
-  // Final high note (C7)
   const finalOsc = ctx.createOscillator();
   const finalGain = ctx.createGain();
   const finalStart = now + 1.32;
@@ -296,6 +312,10 @@ function playAmberDiscovery() {
 }
 
 function startGame() {
+  if (!gpsReady) {
+    showToast('📍 Waiting for GPS signal...', 3000);
+    return;
+  }
   gameActive = true;
   hideStartOverlay();
   showToast('Walk started! 🦕');
@@ -382,7 +402,7 @@ window.addEventListener('beforeunload', () => {
   if (wakeLock) wakeLock.release().catch(() => {});
 });
 
-// Clean up geolocation watcher when page is hidden
+// Clean up when page is hidden
 window.addEventListener('pagehide', () => {
   if (typeof stopTracking === 'function') {
     stopTracking();

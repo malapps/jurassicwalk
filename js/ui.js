@@ -103,6 +103,12 @@ function showToast(message, duration = 15000) {
   }, duration);
 }
 
+function hideToast() {
+  if (!toastEl) return;
+  if (toastTimeout) clearTimeout(toastTimeout);
+  toastEl.classList.remove('show');
+}
+
 function updateDistanceDisplay(totalMetres) {
   if (!distanceValueEl) return;
   if (totalMetres >= 10000) {
