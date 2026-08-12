@@ -18,7 +18,8 @@ const BRONZE = ['Hypsilophodon','Dryosaurus','Lesothosaurus','Iguanodon','Pachyc
 const SILVER = ['Allosaurus','Carnotaurus','Ankylosaurus','Stegosaurus','Corythosaurus','Dilophosaurus','Baryonyx','Megalosaurus','Diplodocus','Pteranodon','Brachiosaurus'];
 const GOLD = ['Tyrannosaurus rex','Velociraptor','Spinosaurus','Giganotosaurus','Triceratops','Deinonychus','Quetzalcoatlus','Argentinosaurus'];
 
-let audioCtx = null;
+// Audio context for amber found sound
+let amberAudioCtx = null;
 
 window.onerror = function(msg, src, lineno) {
   console.error('Error:', msg, 'at', src, lineno);
@@ -118,7 +119,7 @@ function discoverAmber() {
   distanceSinceLastAmber = 0;
   nextAmberThreshold = generateAmberThreshold();
 
-  playPing();
+  playAmberSound();
   showToast('🟠 Amber found!\n-\nSent to lab for analysis.\n-\nResults announced tomorrow..', 15000);
 
   saveCurrentState();
@@ -188,56 +189,74 @@ function buildLabHTML(newPieces) {
   return html;
 }
 
-function playPing() {
-  if (!audioCtx) {
-    try {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    } catch (e) {
-      console.warn('[Audio] Web Audio not available');
-      return;
-    }
+/**
+ * Retro 8-bit victory jingle for amber discovery
+ */
+function playAmberSound() {
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+
+  if (!AudioContext) {
+    console.warn('[Audio] Web Audio API not supported');
+    return;
   }
 
-  if (audioCtx.state === 'suspended') {
-    audioCtx.resume();
+  if (!amberAudioCtx) {
+    amberAudioCtx = new AudioContext();
   }
 
-  const now = audioCtx.currentTime;
+  const ctx = amberAudioCtx;
 
-  const oscillator = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
+  // Resume if suspended (browsers require user gesture)
+  if (ctx.state === 'suspended') {
+    ctx.resume();
+  }
 
-  oscillator.type = 'sine';
+  const now = ctx.currentTime;
 
-  // Starting frequency
-  oscillator.frequency.setValueAtTime(800, now);
+  // Master output
+  const master = ctx.createGain();
+  master.gain.setValueAtTime(0.0, now);
+  master.gain.linearRampToValueAtTime(0.65, now + 0.008);
+  master.gain.setValueAtTime(0.65, now + 0.52);
+  master.gain.exponentialRampToValueAtTime(0.001, now + 0.66);
+  master.connect(ctx.destination);
 
-  // Slight downward pitch sweep
-  oscillator.frequency.exponentialRampToValueAtTime(
-    500,
-    now + 1.2
-  );
+  // Note sequence: C5 → E5 → G5 → A5 → C6 → A5 → G5 → C6
+  const notes = [
+    { frequency: 523.25, duration: 0.070 },   // C5
+    { frequency: 659.25, duration: 0.070 },   // E5
+    { frequency: 783.99, duration: 0.070 },   // G5
+    { frequency: 880.00, duration: 0.070 },   // A5
+    { frequency: 1046.50, duration: 0.070 },  // C6
+    { frequency: 880.00, duration: 0.070 },   // A5
+    { frequency: 783.99, duration: 0.070 },   // G5
+    { frequency: 1046.50, duration: 0.120 }   // C6 (held longer)
+  ];
 
-  // Volume envelope
-  gain.gain.setValueAtTime(0.0001, now);
+  let t = now;
 
-  // Very fast attack
-  gain.gain.exponentialRampToValueAtTime(
-    0.5,
-    now + 0.01
-  );
+  for (const note of notes) {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
 
-  // Long decay
-  gain.gain.exponentialRampToValueAtTime(
-    0.0001,
-    now + 1.5
-  );
+    // 8-bit square wave
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(note.frequency, t);
 
-  oscillator.connect(gain);
-  gain.connect(audioCtx.destination);
+    // Per-note envelope
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.linearRampToValueAtTime(0.24, t + 0.004);
+    gain.gain.setValueAtTime(0.24, t + note.duration * 0.72);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + note.duration);
 
-  oscillator.start(now);
-  oscillator.stop(now + 1.6);
+    osc.connect(gain);
+    gain.connect(master);
+
+    osc.start(t);
+    osc.stop(t + note.duration + 0.005);
+
+    t += note.duration;
+  }
 }
 
 function startGame() {
