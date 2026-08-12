@@ -39,9 +39,9 @@ async function initApp() {
 
   wakeLockSupported = 'wakeLock' in navigator;
   if (wakeLockSupported) {
-    await requestWakeLock();
-    showToast('🔆 Screen will stay awake while you walk');
-  }
+  await requestWakeLock();
+  // Wake lock works silently — no toast needed
+}
 
   onPositionUpdateCallback = handlePositionUpdate;
   onErrorCallback = handleGeoError;
@@ -380,6 +380,22 @@ document.addEventListener('visibilitychange', async () => {
 window.addEventListener('beforeunload', () => {
   saveCurrentState();
   if (wakeLock) wakeLock.release().catch(() => {});
+});
+
+// Clean up geolocation watcher when page is hidden
+window.addEventListener('pagehide', () => {
+  if (typeof stopTracking === 'function') {
+    stopTracking();
+  }
+  saveCurrentState();
+});
+
+// Handle bfcache restore
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) {
+    console.log('[App] Page restored from bfcache, reloading...');
+    window.location.reload();
+  }
 });
 
 if ('serviceWorker' in navigator) {

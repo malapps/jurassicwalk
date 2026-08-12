@@ -138,3 +138,13 @@ function calculateBearing(lat1, lon1, lat2, lon2) {
 function toRadians(deg) { return deg * Math.PI / 180; }
 function toDegrees(rad) { return rad * 180 / Math.PI; }
 function isTracking() { return trackingActive; }
+
+// Clean up when page is hidden
+window.addEventListener('pagehide', () => {
+  if (watchId !== null) {
+    navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+    trackingActive = false;
+    console.log('[Geo] Watcher stopped on pagehide');
+  }
+});
