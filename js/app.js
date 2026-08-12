@@ -1,4 +1,4 @@
-// app.js – Jurassic Walk controller (Stage 2 - with amber test override)
+// app.js – Jurassic Walk controller (Stage 2)
 
 let totalDistanceToday = 0;
 let amberFoundToday = 0;
@@ -193,30 +193,51 @@ function playPing() {
     try {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     } catch (e) {
-      console.warn('Audio not available');
+      console.warn('[Audio] Web Audio not available');
       return;
     }
   }
+
   if (audioCtx.state === 'suspended') {
     audioCtx.resume();
   }
 
   const now = audioCtx.currentTime;
-  const osc = audioCtx.createOscillator();
+
+  const oscillator = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
 
-  osc.type = 'sine';
-  osc.frequency.setValueAtTime(800, now);
-  osc.frequency.linearRampToValueAtTime(1000, now + 0.15);
-  osc.frequency.linearRampToValueAtTime(600, now + 0.3);
+  oscillator.type = 'sine';
 
-  gain.gain.setValueAtTime(0.3, now);
-  gain.gain.linearRampToValueAtTime(0, now + 0.35);
+  // Starting frequency
+  oscillator.frequency.setValueAtTime(800, now);
 
-  osc.connect(gain);
+  // Slight downward pitch sweep
+  oscillator.frequency.exponentialRampToValueAtTime(
+    500,
+    now + 1.2
+  );
+
+  // Volume envelope
+  gain.gain.setValueAtTime(0.0001, now);
+
+  // Very fast attack
+  gain.gain.exponentialRampToValueAtTime(
+    0.5,
+    now + 0.01
+  );
+
+  // Long decay
+  gain.gain.exponentialRampToValueAtTime(
+    0.0001,
+    now + 1.5
+  );
+
+  oscillator.connect(gain);
   gain.connect(audioCtx.destination);
-  osc.start(now);
-  osc.stop(now + 0.35);
+
+  oscillator.start(now);
+  oscillator.stop(now + 1.6);
 }
 
 function startGame() {
@@ -272,11 +293,7 @@ async function loadSavedState() {
       totalDistanceToday = gameState.totalDistanceToday || 0;
       amberFoundToday = gameState.amberFoundToday || 0;
       distanceSinceLastAmber = gameState.distanceSinceLastAmber || 0;
-      
-      // TEMPORARY: Force low threshold for testing amber discovery
-      nextAmberThreshold = 20;
-      // ORIGINAL: nextAmberThreshold = gameState.nextAmberThreshold || generateAmberThreshold();
-      
+      nextAmberThreshold = gameState.nextAmberThreshold || generateAmberThreshold();
       amberPieces = gameState.amberPieces || [];
     }
   } catch (e) {
