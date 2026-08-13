@@ -114,6 +114,6 @@ function isNewWeek(lastDateStr) {
  * Generate a random distance threshold with exponential distribution (mean 1500 m)
  */
 function generateAmberThreshold() {
-  const mean = 1000;
+  const mean = 10;
   return Math.round(-mean * Math.log(1 - Math.random()));
 }
