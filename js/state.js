@@ -23,6 +23,7 @@ function loadValue(key) {
 
 async function saveGameState(state) {
   saveValue('totalDistanceToday', state.totalDistanceToday);
+  saveValue('pendingAmber', state.pendingAmber);
   saveValue('amberFoundToday', state.amberFoundToday);
   saveValue('lifetimeAmberFound', state.lifetimeAmberFound);
   saveValue('lifetimeDistance', state.lifetimeDistance);
@@ -38,6 +39,7 @@ async function saveGameState(state) {
 
 async function loadGameState() {
   const totalDistanceToday = loadValue('totalDistanceToday') || 0;
+  const pendingAmber = loadValue('pendingAmber') || [];
   const amberFoundToday = loadValue('amberFoundToday') || 0;
   const lifetimeAmberFound = loadValue('lifetimeAmberFound') || 0;
   const lifetimeDistance = loadValue('lifetimeDistance') || 0;
@@ -112,6 +114,6 @@ function isNewWeek(lastDateStr) {
  * Generate a random distance threshold with exponential distribution (mean 1500 m)
  */
 function generateAmberThreshold() {
-  const mean = 10;
+  const mean = 1000;
   return Math.round(-mean * Math.log(1 - Math.random()));
 }

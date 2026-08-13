@@ -1,4 +1,4 @@
-// app.js – Jurassic Walk controller (Stage 3/4)
+// app.js – Jurassic Walk controller (Stage 3/4 — with pending amber logic)
 
 let totalDistanceToday = 0;
 let amberFoundToday = 0;
@@ -12,7 +12,8 @@ let wakeLock = null;
 let wakeLockSupported = false;
 let initialPositionSet = false;
 let gameActive = false;
-let amberPieces = [];          // Only DNA-positive pieces kept after lab results
+let amberPieces = [];          // Analyzed DNA-positive pieces (visible in incubator)
+let pendingAmber = [];         // Found today, awaiting lab results
 let incubators = [
   { active: false, level: null, species: null, distanceRequired: 0, distanceWalked: 0 }
 ];
@@ -71,7 +72,7 @@ async function initApp() {
   getInitialPosition();
 }
 
-let totalAmberYesterday = 0; // Used for lab results display
+let totalAmberYesterday = 0;
 
 function getInitialPosition() {
   const defaultLat = 51.5074;
@@ -134,7 +135,6 @@ function handlePositionUpdate(data) {
     updateDistanceDisplay(totalDistanceToday);
 
     // Incubator progress
-    let hatchedThisUpdate = false;
     incubators.forEach(inc => {
       if (inc.active) {
         inc.distanceWalked += distance;
@@ -143,7 +143,6 @@ function handlePositionUpdate(data) {
           const level = inc.level;
           const species = inc.species;
 
-          // Add to hatched dinosaurs
           const existing = hatchedDinosaurs.find(d => d.species === species);
           if (existing) {
             existing.count++;
@@ -151,17 +150,14 @@ function handlePositionUpdate(data) {
             hatchedDinosaurs.push({ species, count: 1 });
           }
 
-          // Reset incubator
           inc.active = false;
           inc.level = null;
           inc.species = null;
           inc.distanceRequired = 0;
           inc.distanceWalked = 0;
 
-          // Show hatch modal + sound
           playAmberDiscovery();
           showHatchModal(level, species);
-          hatchedThisUpdate = true;
         }
       }
     });
@@ -184,7 +180,7 @@ function discoverAmber() {
   updateAmberDisplay(amberFoundToday);
 
   const piece = createAmberPiece();
-  amberPieces.push(piece);
+  pendingAmber.push(piece);   // ← Goes to PENDING, not amberPieces
 
   distanceSinceLastAmber = 0;
   nextAmberThreshold = generateAmberThreshold();
@@ -232,22 +228,23 @@ function processLabResults() {
   const today = new Date().toISOString().split('T')[0];
   const newPositives = [];
 
-  // Count all amber from previous days
-  const previousAmber = amberPieces.filter(p => p.dateFound < today && !p.analyzed);
-  totalAmberYesterday = previousAmber.length;
+  // All pending amber from previous days
+  const previousPending = pendingAmber.filter(p => p.dateFound < today);
+  totalAmberYesterday = previousPending.length;
 
-  // Process each unanalyzed piece
-  amberPieces.forEach(piece => {
-    if (!piece.analyzed && piece.dateFound < today) {
-      piece.analyzed = true;
-      if (piece.hasDNA) {
-        newPositives.push(piece);
-      }
+  // Process each pending piece
+  previousPending.forEach(piece => {
+    piece.analyzed = true;
+    if (piece.hasDNA) {
+      // Move to main amberPieces (visible in incubator)
+      amberPieces.push(piece);
+      newPositives.push(piece);
     }
+    // Non-DNA pieces are simply discarded
   });
 
-  // Remove analyzed non-DNA pieces to save storage
-  amberPieces = amberPieces.filter(p => !(p.analyzed && !p.hasDNA));
+  // Remove processed pieces from pending
+  pendingAmber = pendingAmber.filter(p => p.dateFound >= today);
 
   // Increment lifetime amber found
   lifetimeAmberFound += totalAmberYesterday;
@@ -414,6 +411,7 @@ async function saveCurrentState() {
       lastDate: new Date().toISOString(),
       trailPoints: getTrailCoordinates(),
       amberPieces,
+      pendingAmber,
       incubators,
       hatchedDinosaurs,
       distanceSinceLastAmber,
@@ -435,6 +433,7 @@ async function loadSavedState() {
       distanceSinceLastAmber = 0;
       nextAmberThreshold = generateAmberThreshold();
       amberPieces = gameState.amberPieces || [];
+      pendingAmber = gameState.pendingAmber || [];
       incubators = gameState.incubators || [
         { active: false, level: null, species: null, distanceRequired: 0, distanceWalked: 0 }
       ];
@@ -448,6 +447,7 @@ async function loadSavedState() {
       distanceSinceLastAmber = gameState.distanceSinceLastAmber || 0;
       nextAmberThreshold = gameState.nextAmberThreshold || generateAmberThreshold();
       amberPieces = gameState.amberPieces || [];
+      pendingAmber = gameState.pendingAmber || [];
       incubators = gameState.incubators || [
         { active: false, level: null, species: null, distanceRequired: 0, distanceWalked: 0 }
       ];
@@ -462,6 +462,7 @@ async function loadSavedState() {
     distanceSinceLastAmber = 0;
     nextAmberThreshold = generateAmberThreshold();
     amberPieces = [];
+    pendingAmber = [];
     incubators = [
       { active: false, level: null, species: null, distanceRequired: 0, distanceWalked: 0 }
     ];
