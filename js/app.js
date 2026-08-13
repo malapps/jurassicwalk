@@ -1,7 +1,10 @@
-// app.js – Jurassic Walk controller (Stage 2)
+// app.js – Jurassic Walk controller (Stage 3/4)
 
 let totalDistanceToday = 0;
 let amberFoundToday = 0;
+let lifetimeAmberFound = 0;
+let lifetimeDistance = 0;
+let weeklyDistance = 0;
 let distanceSinceLastAmber = 0;
 let nextAmberThreshold = 10;
 let lastSaveTime = 0;
@@ -9,7 +12,11 @@ let wakeLock = null;
 let wakeLockSupported = false;
 let initialPositionSet = false;
 let gameActive = false;
-let amberPieces = [];
+let amberPieces = [];          // Only DNA-positive pieces kept after lab results
+let incubators = [
+  { active: false, level: null, species: null, distanceRequired: 0, distanceWalked: 0 }
+];
+let hatchedDinosaurs = [];
 let gpsReady = false;
 
 const SAVE_INTERVAL = 5000;
@@ -30,6 +37,7 @@ window.onerror = function(msg, src, lineno) {
 async function initApp() {
   console.log('[App] Starting Jurassic Walk...');
   initUI();
+  initIncubatorMenu();
 
   try { await openDB(); } catch (e) { showError('Storage not available.'); }
 
@@ -48,46 +56,47 @@ async function initApp() {
   // Check for lab results (new day)
   if (isNewDay(gameState?.lastDate)) {
     const newPieces = processLabResults();
-    if (newPieces.length > 0) {
-      showLabModal(buildLabHTML(newPieces));
+    if (newPieces.length > 0 || totalAmberYesterday > 0) {
+      showLabModal(buildLabHTML(newPieces, totalAmberYesterday));
     }
   }
 
-  // Start GPS (no toast here — overlay itself tells the user what to do)
+  // Check for weekly reset
+  if (isNewWeek(gameState?.lastDate)) {
+    weeklyDistance = 0;
+    console.log('[App] New week — weekly distance reset');
+  }
+
+  // Start GPS
   getInitialPosition();
 }
 
+let totalAmberYesterday = 0; // Used for lab results display
+
 function getInitialPosition() {
-  // Default fallback position — map always loads
   const defaultLat = 51.5074;
   const defaultLng = -0.1278;
 
-  // Initialise map immediately so user always sees a map
   initMap(defaultLat, defaultLng);
 
-  // Now try to get real position
   navigator.geolocation.getCurrentPosition(
     (pos) => {
       const { latitude, longitude } = pos.coords;
 
       console.log('[App] GPS position acquired:', latitude, longitude);
 
-      // Re-initialise map at real position
       initMap(latitude, longitude);
 
-      // Restore trail if available
       if (gameState && gameState.trailPoints && gameState.trailPoints.length > 0) {
         restoreTrail(gameState.trailPoints);
       }
 
-      // Start continuous tracking
       const started = startTracking();
       if (!started) showError('Could not start location tracking');
 
       initialPositionSet = true;
       gpsReady = true;
 
-      // If user hasn't started yet, show overlay
       if (!gameActive) {
         showStartOverlay();
       }
@@ -98,7 +107,6 @@ function getInitialPosition() {
     (err) => {
       console.error('[App] Failed to get initial position:', err);
       showError('Could not get your location. Check GPS and permissions.');
-      // Still show overlay so user can at least see the app
       if (!gameActive) {
         showStartOverlay();
       }
@@ -120,9 +128,45 @@ function handlePositionUpdate(data) {
 
   if (gameActive && distance > 0) {
     totalDistanceToday += distance;
+    lifetimeDistance += distance;
+    weeklyDistance += distance;
     distanceSinceLastAmber += distance;
     updateDistanceDisplay(totalDistanceToday);
 
+    // Incubator progress
+    let hatchedThisUpdate = false;
+    incubators.forEach(inc => {
+      if (inc.active) {
+        inc.distanceWalked += distance;
+        if (inc.distanceWalked >= inc.distanceRequired) {
+          // Hatch!
+          const level = inc.level;
+          const species = inc.species;
+
+          // Add to hatched dinosaurs
+          const existing = hatchedDinosaurs.find(d => d.species === species);
+          if (existing) {
+            existing.count++;
+          } else {
+            hatchedDinosaurs.push({ species, count: 1 });
+          }
+
+          // Reset incubator
+          inc.active = false;
+          inc.level = null;
+          inc.species = null;
+          inc.distanceRequired = 0;
+          inc.distanceWalked = 0;
+
+          // Show hatch modal + sound
+          playAmberDiscovery();
+          showHatchModal(level, species);
+          hatchedThisUpdate = true;
+        }
+      }
+    });
+
+    // Amber discovery
     if (distanceSinceLastAmber >= nextAmberThreshold) {
       discoverAmber();
     }
@@ -179,7 +223,8 @@ function createAmberPiece() {
     analyzed: false,
     hasDNA,
     level,
-    species
+    species,
+    incubated: false
   };
 }
 
@@ -187,6 +232,11 @@ function processLabResults() {
   const today = new Date().toISOString().split('T')[0];
   const newPositives = [];
 
+  // Count all amber from previous days
+  const previousAmber = amberPieces.filter(p => p.dateFound < today && !p.analyzed);
+  totalAmberYesterday = previousAmber.length;
+
+  // Process each unanalyzed piece
   amberPieces.forEach(piece => {
     if (!piece.analyzed && piece.dateFound < today) {
       piece.analyzed = true;
@@ -196,22 +246,37 @@ function processLabResults() {
     }
   });
 
+  // Remove analyzed non-DNA pieces to save storage
+  amberPieces = amberPieces.filter(p => !(p.analyzed && !p.hasDNA));
+
+  // Increment lifetime amber found
+  lifetimeAmberFound += totalAmberYesterday;
+
   saveCurrentState();
   return newPositives;
 }
 
-function buildLabHTML(newPieces) {
-  if (newPieces.length === 0) {
-    return '<p>No new dinosaur DNA found.</p>';
+function buildLabHTML(newPieces, totalAmber) {
+  if (totalAmber === 0) {
+    return '<p>No amber pieces to test.</p>';
   }
 
-  let html = `<p>${newPieces.length} amber piece(s) contained DNA!</p>`;
+  if (newPieces.length === 0) {
+    return `
+      <p>${totalAmber} amber piece(s) came back from testing.</p>
+      <p>None contained dinosaur DNA.</p>
+      <p>Keep walking to increase your chance of finding DNA!</p>
+    `;
+  }
+
+  let html = `<p>${totalAmber} amber piece(s) tested.</p>`;
+  html += `<p>${newPieces.length} contained dinosaur DNA!</p>`;
   html += '<ul style="list-style:none;padding:0;">';
   newPieces.forEach(p => {
     html += `<li class="positive">🟠 ${p.level} level dinosaur DNA detected</li>`;
   });
   html += '</ul>';
-  html += '<p>Incubate them to discover the exact species!</p>';
+  html += '<p>Tap the amber counter to open your incubator and hatch them!</p>';
   return html;
 }
 
@@ -343,9 +408,14 @@ async function saveCurrentState() {
     const state = {
       totalDistanceToday,
       amberFoundToday,
+      lifetimeAmberFound,
+      lifetimeDistance,
+      weeklyDistance,
       lastDate: new Date().toISOString(),
       trailPoints: getTrailCoordinates(),
       amberPieces,
+      incubators,
+      hatchedDinosaurs,
       distanceSinceLastAmber,
       nextAmberThreshold
     };
@@ -365,12 +435,26 @@ async function loadSavedState() {
       distanceSinceLastAmber = 0;
       nextAmberThreshold = generateAmberThreshold();
       amberPieces = gameState.amberPieces || [];
+      incubators = gameState.incubators || [
+        { active: false, level: null, species: null, distanceRequired: 0, distanceWalked: 0 }
+      ];
+      hatchedDinosaurs = gameState.hatchedDinosaurs || [];
+      lifetimeAmberFound = gameState.lifetimeAmberFound || 0;
+      lifetimeDistance = gameState.lifetimeDistance || 0;
+      weeklyDistance = gameState.weeklyDistance || 0;
     } else {
       totalDistanceToday = gameState.totalDistanceToday || 0;
       amberFoundToday = gameState.amberFoundToday || 0;
       distanceSinceLastAmber = gameState.distanceSinceLastAmber || 0;
       nextAmberThreshold = gameState.nextAmberThreshold || generateAmberThreshold();
       amberPieces = gameState.amberPieces || [];
+      incubators = gameState.incubators || [
+        { active: false, level: null, species: null, distanceRequired: 0, distanceWalked: 0 }
+      ];
+      hatchedDinosaurs = gameState.hatchedDinosaurs || [];
+      lifetimeAmberFound = gameState.lifetimeAmberFound || 0;
+      lifetimeDistance = gameState.lifetimeDistance || 0;
+      weeklyDistance = gameState.weeklyDistance || 0;
     }
   } catch (e) {
     totalDistanceToday = 0;
@@ -378,6 +462,13 @@ async function loadSavedState() {
     distanceSinceLastAmber = 0;
     nextAmberThreshold = generateAmberThreshold();
     amberPieces = [];
+    incubators = [
+      { active: false, level: null, species: null, distanceRequired: 0, distanceWalked: 0 }
+    ];
+    hatchedDinosaurs = [];
+    lifetimeAmberFound = 0;
+    lifetimeDistance = 0;
+    weeklyDistance = 0;
   }
 }
 

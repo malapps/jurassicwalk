@@ -10,6 +10,9 @@ let startOverlayEl;
 let labModalEl;
 let labContentEl;
 let labCloseBtnEl;
+let hatchModalEl;
+let hatchContentEl;
+let hatchCloseBtnEl;
 let statusTimeout = null;
 let toastTimeout = null;
 let deferredPrompt = null;
@@ -24,31 +27,46 @@ function initUI() {
   labModalEl = document.getElementById('lab-modal');
   labContentEl = document.getElementById('lab-content');
   labCloseBtnEl = document.getElementById('lab-close-btn');
+  hatchModalEl = document.getElementById('hatch-modal');
+  hatchContentEl = document.getElementById('hatch-content');
+  hatchCloseBtnEl = document.getElementById('hatch-close-btn');
 
+  // Toast element
   toastEl = document.createElement('div');
   toastEl.id = 'toast';
   document.body.appendChild(toastEl);
 
+  // PWA install prompt
   createPWAPrompt();
 
+  // Start button
   document.getElementById('start-btn').addEventListener('click', () => {
     if (typeof startGame === 'function') startGame();
   });
 
+  // Pause button
   document.getElementById('pause-part').addEventListener('click', () => {
     if (typeof togglePause === 'function') togglePause();
   });
 
+  // Lab close button
   labCloseBtnEl.addEventListener('click', () => {
     hideLabModal();
   });
 
+  // Hatch close button
+  hatchCloseBtnEl.addEventListener('click', () => {
+    hideHatchModal();
+  });
+
+  // Listen for beforeinstallprompt
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
     showPWAPrompt();
   });
 
+  // Stats placeholder – distance part is tappable later
   const distancePart = document.getElementById('distance-part');
   if (distancePart) {
     distancePart.addEventListener('click', () => {
@@ -161,6 +179,22 @@ function hideLabModal() {
   if (typeof gameActive !== 'undefined' && !gameActive) {
     showStartOverlay();
   }
+}
+
+// Hatch modal
+function showHatchModal(level, species) {
+  if (!hatchModalEl || !hatchContentEl) return;
+  hatchContentEl.innerHTML = `
+    <p style="font-size:1.1em;color:#334086;font-weight:600;">${level} dino DNA 100%</p>
+    <p style="font-size:1.3em;margin:12px 0;">🦕 ${species} has hatched!</p>
+    <p style="color:#666;">Your island grows!</p>
+  `;
+  hatchModalEl.classList.remove('hidden');
+}
+
+function hideHatchModal() {
+  if (!hatchModalEl) return;
+  hatchModalEl.classList.add('hidden');
 }
 
 // Game state UI controls

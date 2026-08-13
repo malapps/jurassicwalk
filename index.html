@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#1B5E20">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="description" content="Jurassic Walk - Walk, discover amber, and hatch dinosaurs in the real world!">
+  <meta name="description" content="Jurassic Walk – Walk, discover amber, and hatch dinosaurs in the real world!">
   <title>Jurassic Walk</title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/png" href="icons/icon-192.png">
@@ -20,12 +20,14 @@
 
   <!-- Floating bottom controls -->
   <div id="bottom-controls">
-    <div id="amber-panel" class="bottom-panel">
+    <!-- Amber panel (now a button that opens incubator menu) -->
+    <button id="amber-panel" class="bottom-panel">
       <span class="bb-icon">🟠</span>
       <span class="bb-value" id="amber-count">0</span>
       <span class="bb-label">amber</span>
-    </div>
+    </button>
 
+    <!-- Combined distance + pause panel -->
     <div id="distance-pause-panel" class="bottom-panel">
       <div id="distance-part">
         <span class="bb-value" id="distance-value">0 m</span>
@@ -38,13 +40,31 @@
     </div>
   </div>
 
-  <!-- Lab results modal (hidden by default) -->
+  <!-- Lab results modal -->
   <div id="lab-modal" class="modal-overlay hidden">
     <div class="modal-card">
       <h2>🔬 Lab Results</h2>
       <div id="lab-content"></div>
       <button id="lab-close-btn">CONTINUE</button>
     </div>
+  </div>
+
+  <!-- Hatch modal -->
+  <div id="hatch-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h2>🦕 Hatched!</h2>
+      <div id="hatch-content"></div>
+      <button id="hatch-close-btn">AMAZING!</button>
+    </div>
+  </div>
+
+  <!-- Incubator menu (slides up from bottom) -->
+  <div id="incubator-menu" class="slide-up-menu hidden">
+    <div class="menu-header">
+      <h2>Incubator</h2>
+      <button id="incubator-close-btn">✕</button>
+    </div>
+    <div id="incubator-content"></div>
   </div>
 
   <!-- Start walk overlay -->
@@ -57,12 +77,13 @@
     </div>
   </div>
 
-  <!-- Scripts -->
+  <!-- Load scripts -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="js/state.js"></script>
   <script src="js/geo.js"></script>
   <script src="js/map.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/incubator.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
