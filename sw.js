@@ -1,4 +1,6 @@
-const CACHE_NAME = 'jurassicwalk-v1';
+// sw.js – Service Worker for Jurassic Walk PWA
+
+const CACHE_NAME = 'jurassicwalk-v2.0.0';
 const ASSETS_TO_CACHE = [
   '/jurassicwalk/',
   '/jurassicwalk/index.html',
@@ -8,6 +10,7 @@ const ASSETS_TO_CACHE = [
   '/jurassicwalk/js/geo.js',
   '/jurassicwalk/js/map.js',
   '/jurassicwalk/js/ui.js',
+  '/jurassicwalk/js/incubator.js',
   '/jurassicwalk/js/app.js',
   '/jurassicwalk/img/arrow.svg',
   '/jurassicwalk/icons/icon-192.png',
@@ -16,7 +19,7 @@ const ASSETS_TO_CACHE = [
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
 ];
 
-// Install event - cache all assets
+// Install event – cache all assets
 self.addEventListener('install', (event) => {
   console.log('[SW] Installing...');
   event.waitUntil(
@@ -35,7 +38,7 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Activate event - clean old caches
+// Activate event – clean old caches
 self.addEventListener('activate', (event) => {
   console.log('[SW] Activating...');
   event.waitUntil(
@@ -55,7 +58,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch event - cache first, then network
+// Fetch event – cache first, then network
 self.addEventListener('fetch', (event) => {
   // Skip non-GET requests and chrome-extension requests
   if (event.request.method !== 'GET') return;
@@ -88,7 +91,7 @@ self.addEventListener('fetch', (event) => {
             return response;
           })
           .catch((error) => {
-            console.warn('[SW] Fetch failed, returning offline page if available:', error);
+            console.warn('[SW] Fetch failed:', error);
             // Could return an offline fallback page here
           });
       })
