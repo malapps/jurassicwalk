@@ -1,4 +1,4 @@
-// app.js – Jurassic Walk controller (Stage 3/4 — with pending amber logic)
+// app.js – Jurassic Walk controller (Stage 3/4 — with pending amber + fixed lab results order)
 
 let totalDistanceToday = 0;
 let amberFoundToday = 0;
@@ -6,7 +6,7 @@ let lifetimeAmberFound = 0;
 let lifetimeDistance = 0;
 let weeklyDistance = 0;
 let distanceSinceLastAmber = 0;
-let nextAmberThreshold = 6;
+let nextAmberThreshold = 10;
 let lastSaveTime = 0;
 let wakeLock = null;
 let wakeLockSupported = false;
@@ -46,15 +46,7 @@ async function initApp() {
   updateDistanceDisplay(totalDistanceToday);
   updateAmberDisplay(amberFoundToday);
 
-  wakeLockSupported = 'wakeLock' in navigator;
-  if (wakeLockSupported) {
-    await requestWakeLock();
-  }
-
-  onPositionUpdateCallback = handlePositionUpdate;
-  onErrorCallback = handleGeoError;
-
-  // Check for lab results (new day)
+  // ✅ Lab results check BEFORE GPS starts (prevents date overwrite)
   if (isNewDay(gameState?.lastDate)) {
     const newPieces = processLabResults();
     if (newPieces.length > 0 || totalAmberYesterday > 0) {
@@ -62,13 +54,23 @@ async function initApp() {
     }
   }
 
-  // Check for weekly reset
+  // Weekly reset check
   if (isNewWeek(gameState?.lastDate)) {
     weeklyDistance = 0;
     console.log('[App] New week — weekly distance reset');
   }
 
-  // Start GPS
+  // Wake lock
+  wakeLockSupported = 'wakeLock' in navigator;
+  if (wakeLockSupported) {
+    await requestWakeLock();
+  }
+
+  // Set callbacks
+  onPositionUpdateCallback = handlePositionUpdate;
+  onErrorCallback = handleGeoError;
+
+  // ✅ Start GPS LAST
   getInitialPosition();
 }
 
@@ -180,7 +182,7 @@ function discoverAmber() {
   updateAmberDisplay(amberFoundToday);
 
   const piece = createAmberPiece();
-  pendingAmber.push(piece);   // ← Goes to PENDING, not amberPieces
+  pendingAmber.push(piece);   // Goes to PENDING, not amberPieces
 
   distanceSinceLastAmber = 0;
   nextAmberThreshold = generateAmberThreshold();
@@ -240,7 +242,7 @@ function processLabResults() {
       amberPieces.push(piece);
       newPositives.push(piece);
     }
-    // Non-DNA pieces are simply discarded
+    // Non-DNA pieces are discarded
   });
 
   // Remove processed pieces from pending
@@ -248,6 +250,9 @@ function processLabResults() {
 
   // Increment lifetime amber found
   lifetimeAmberFound += totalAmberYesterday;
+
+  // ✅ Reset lastSaveTime so first GPS update doesn't immediately re-save
+  lastSaveTime = Date.now();
 
   saveCurrentState();
   return newPositives;
@@ -508,6 +513,21 @@ window.addEventListener('pageshow', (event) => {
   if (event.persisted) {
     console.log('[App] Page restored from bfcache, reloading...');
     window.location.reload();
+  }
+});
+
+// Reload if app was hidden for more than 1 hour (prevents stale lab results)
+let lastVisibilityTime = Date.now();
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    const now = Date.now();
+    if (now - lastVisibilityTime > 3600000) { // 1 hour
+      console.log('[App] Hidden for > 1 hour, reloading...');
+      window.location.reload();
+    }
+  } else {
+    lastVisibilityTime = Date.now();
   }
 });
 
