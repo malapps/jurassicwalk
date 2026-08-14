@@ -23,7 +23,6 @@ function loadValue(key) {
 
 async function saveGameState(state) {
   saveValue('totalDistanceToday', state.totalDistanceToday);
-  saveValue('pendingAmber', state.pendingAmber);
   saveValue('amberFoundToday', state.amberFoundToday);
   saveValue('lifetimeAmberFound', state.lifetimeAmberFound);
   saveValue('lifetimeDistance', state.lifetimeDistance);
@@ -31,6 +30,7 @@ async function saveGameState(state) {
   saveValue('lastDate', state.lastDate);
   saveValue('trailPoints', state.trailPoints);
   saveValue('amberPieces', state.amberPieces);
+  saveValue('pendingAmber', state.pendingAmber);
   saveValue('incubators', state.incubators);
   saveValue('hatchedDinosaurs', state.hatchedDinosaurs);
   saveValue('distanceSinceLastAmber', state.distanceSinceLastAmber);
@@ -39,7 +39,6 @@ async function saveGameState(state) {
 
 async function loadGameState() {
   const totalDistanceToday = loadValue('totalDistanceToday') || 0;
-  const pendingAmber = loadValue('pendingAmber') || [];
   const amberFoundToday = loadValue('amberFoundToday') || 0;
   const lifetimeAmberFound = loadValue('lifetimeAmberFound') || 0;
   const lifetimeDistance = loadValue('lifetimeDistance') || 0;
@@ -47,6 +46,7 @@ async function loadGameState() {
   const lastDate = loadValue('lastDate') || null;
   const trailPoints = loadValue('trailPoints') || [];
   const amberPieces = loadValue('amberPieces') || [];
+  const pendingAmber = loadValue('pendingAmber') || [];
   const incubators = loadValue('incubators') || [
     { active: false, level: null, species: null, distanceRequired: 0, distanceWalked: 0 }
   ];
@@ -63,6 +63,7 @@ async function loadGameState() {
     lastDate,
     trailPoints,
     amberPieces,
+    pendingAmber,
     incubators,
     hatchedDinosaurs,
     distanceSinceLastAmber,
@@ -89,19 +90,15 @@ function isNewDay(lastDateStr) {
   return last.toDateString() !== now.toDateString();
 }
 
-/**
- * Check if we've crossed a Monday boundary (for weekly reset)
- */
 function isNewWeek(lastDateStr) {
   if (!lastDateStr) return true;
   const last = new Date(lastDateStr);
   const now = new Date();
   
-  // Get Monday of current week (0 = Sunday, 1 = Monday)
   const getMonday = (d) => {
     const date = new Date(d);
-    const day = date.getDay(); // 0=Sun, 1=Mon, ...
-    const diff = (day === 0 ? 6 : day - 1); // days since Monday
+    const day = date.getDay();
+    const diff = (day === 0 ? 6 : day - 1);
     date.setDate(date.getDate() - diff);
     date.setHours(0, 0, 0, 0);
     return date;
@@ -110,9 +107,6 @@ function isNewWeek(lastDateStr) {
   return getMonday(last).getTime() < getMonday(now).getTime();
 }
 
-/**
- * Generate a random distance threshold with exponential distribution (mean 1500 m)
- */
 function generateAmberThreshold() {
   const mean = 10;
   return Math.round(-mean * Math.log(1 - Math.random()));
