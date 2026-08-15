@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#1B5E20">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="description" content="Jurassic Walk – Walk, discover amber, and hatch dinosaurs in the real world!">
@@ -20,7 +21,7 @@
 
   <!-- Floating bottom controls -->
   <div id="bottom-controls">
-    <!-- Amber panel (now a button that opens incubator menu) -->
+    <!-- Amber panel (opens incubator menu) -->
     <button id="amber-panel" class="bottom-panel">
       <span class="bb-icon">🟠</span>
       <span class="bb-value" id="amber-count">0</span>
@@ -29,10 +30,10 @@
 
     <!-- Combined distance + pause panel -->
     <div id="distance-pause-panel" class="bottom-panel">
-      <div id="distance-part">
+      <button id="distance-part" class="distance-button">
         <span class="bb-value" id="distance-value">0 m</span>
         <span class="bb-label">TODAY</span>
-      </div>
+      </button>
       <div class="split-line"></div>
       <button id="pause-part" class="pause-button">
         <span class="pause-icon" id="pause-icon">▶</span>
@@ -67,6 +68,15 @@
     <div id="incubator-content"></div>
   </div>
 
+  <!-- Stats page (slides up from bottom) -->
+  <div id="stats-page" class="slide-up-menu hidden">
+    <div class="menu-header">
+      <h2>📊 Stats</h2>
+      <button id="stats-close-btn">✕</button>
+    </div>
+    <div id="stats-content"></div>
+  </div>
+
   <!-- Start walk overlay -->
   <div id="start-overlay">
     <div id="start-card">
@@ -84,6 +94,7 @@
   <script src="js/map.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/incubator.js"></script>
+  <script src="js/stats.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

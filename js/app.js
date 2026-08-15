@@ -1,4 +1,4 @@
-// app.js – Jurassic Walk controller (Stage 3/4 — with pending amber + fixed lab results order)
+// app.js – Jurassic Walk controller (Stage 3/4 — with stats page)
 
 let totalDistanceToday = 0;
 let amberFoundToday = 0;
@@ -6,7 +6,7 @@ let lifetimeAmberFound = 0;
 let lifetimeDistance = 0;
 let weeklyDistance = 0;
 let distanceSinceLastAmber = 0;
-let nextAmberThreshold = 10;
+let nextAmberThreshold = 100;
 let lastSaveTime = 0;
 let wakeLock = null;
 let wakeLockSupported = false;
@@ -39,6 +39,7 @@ async function initApp() {
   console.log('[App] Starting Jurassic Walk...');
   initUI();
   initIncubatorMenu();
+  initStatsPage();
 
   try { await openDB(); } catch (e) { showError('Storage not available.'); }
 
@@ -46,7 +47,7 @@ async function initApp() {
   updateDistanceDisplay(totalDistanceToday);
   updateAmberDisplay(amberFoundToday);
 
-  // ✅ Lab results check BEFORE GPS starts (prevents date overwrite)
+  // Lab results check BEFORE GPS starts (prevents date overwrite)
   if (isNewDay(gameState?.lastDate)) {
     const newPieces = processLabResults();
     if (newPieces.length > 0 || totalAmberYesterday > 0) {
@@ -70,7 +71,7 @@ async function initApp() {
   onPositionUpdateCallback = handlePositionUpdate;
   onErrorCallback = handleGeoError;
 
-  // ✅ Start GPS LAST
+  // Start GPS LAST
   getInitialPosition();
 }
 
@@ -251,7 +252,7 @@ function processLabResults() {
   // Increment lifetime amber found
   lifetimeAmberFound += totalAmberYesterday;
 
-  // ✅ Reset lastSaveTime so first GPS update doesn't immediately re-save
+  // Reset lastSaveTime so first GPS update doesn't immediately re-save
   lastSaveTime = Date.now();
 
   saveCurrentState();
@@ -516,13 +517,13 @@ window.addEventListener('pageshow', (event) => {
   }
 });
 
-// Reload if app was hidden for more than 1 hour (prevents stale lab results)
+// Reload if app was hidden for more than 1 hour
 let lastVisibilityTime = Date.now();
 
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
     const now = Date.now();
-    if (now - lastVisibilityTime > 3600000) { // 1 hour
+    if (now - lastVisibilityTime > 3600000) {
       console.log('[App] Hidden for > 1 hour, reloading...');
       window.location.reload();
     }

@@ -66,13 +66,8 @@ function initUI() {
     showPWAPrompt();
   });
 
-  // Stats placeholder – distance part is tappable later
-  const distancePart = document.getElementById('distance-part');
-  if (distancePart) {
-    distancePart.addEventListener('click', () => {
-      console.log('Stats tapped – not yet implemented');
-    });
-  }
+  // NOTE: Distance button click handler is now in stats.js
+  // (initStatsPage sets it up)
 
   console.log('[UI] Initialised');
 }

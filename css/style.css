@@ -114,21 +114,37 @@ html, body {
   transform: none;
 }
 
-/* Left distance area */
-#distance-part {
+/* Distance button (now tappable for stats) */
+.distance-button {
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  padding: 0 8px 0 0;
+  font-family: inherit;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  flex: 1;
   min-width: 80px;
-  padding-right: 8px;
+}
+
+.distance-button:active {
+  opacity: 0.7;
 }
 
 /* Distance value – larger font */
-#distance-part .bb-value {
+.distance-button .bb-value {
   font-size: 1.8em;
   font-weight: 700;
+}
+
+.distance-button .bb-label {
+  font-size: 0.6em;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.7;
+  margin-top: 2px;
 }
 
 /* Split line */
@@ -358,7 +374,8 @@ html, body {
   margin: 0;
 }
 
-#incubator-close-btn {
+#incubator-close-btn,
+#stats-close-btn {
   background: #f0f0f0;
   border: none;
   width: 32px;
@@ -372,7 +389,8 @@ html, body {
   color: #333;
 }
 
-#incubator-close-btn:active {
+#incubator-close-btn:active,
+#stats-close-btn:active {
   background: #ddd;
 }
 
@@ -513,6 +531,132 @@ html, body {
   color: #888;
   padding: 20px;
   font-size: 0.9em;
+}
+
+/* === Stats Page === */
+.stats-section {
+  padding: 16px 20px;
+}
+
+.stats-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.stats-row:last-child {
+  border-bottom: none;
+}
+
+.stats-label {
+  font-size: 0.85em;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #666;
+}
+
+.stats-value {
+  font-size: 1.2em;
+  font-weight: 700;
+  color: #334086;
+}
+
+/* Island section */
+.island-section {
+  padding: 0 20px 20px;
+}
+
+.island-title {
+  font-size: 0.9em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #334086;
+  padding: 16px 0 10px;
+  border-top: 2px solid #e0e0e0;
+  margin-top: 8px;
+}
+
+.dino-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.dino-name {
+  font-weight: 600;
+  color: #333;
+  flex: 1;
+}
+
+.dino-level-badge {
+  font-size: 0.7em;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 10px;
+  margin-right: 10px;
+}
+
+.dino-level-badge.gold {
+  background: #FFF8DC;
+  color: #B8860B;
+}
+
+.dino-level-badge.silver {
+  background: #F5F5F5;
+  color: #696969;
+}
+
+.dino-level-badge.bronze {
+  background: #FDF5E6;
+  color: #8B4513;
+}
+
+.dino-count {
+  font-weight: 700;
+  color: #334086;
+  min-width: 40px;
+  text-align: right;
+}
+
+.no-dinos-msg {
+  text-align: center;
+  color: #888;
+  padding: 20px;
+  font-size: 0.9em;
+}
+
+/* Species progress */
+.species-progress {
+  padding: 12px 0;
+  text-align: center;
+}
+
+.species-progress-text {
+  font-size: 0.9em;
+  font-weight: 600;
+  color: #334086;
+  margin-bottom: 6px;
+}
+
+.species-progress .progress-bar {
+  width: 100%;
+  height: 10px;
+  background: #e0e0e0;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.species-progress .progress-fill {
+  height: 100%;
+  background: #FF8F00;
+  border-radius: 5px;
+  transition: width 0.3s ease;
 }
 
 /* === Toast Notification === */
