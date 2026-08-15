@@ -41,14 +41,6 @@ function renderStatsPage() {
   // --- Stats Section ---
   html += '<div class="stats-section">';
 
-  // Distance today
-  html += `
-    <div class="stats-row">
-      <span class="stats-label">Today</span>
-      <span class="stats-value">${formatDistance(totalDistanceToday)}</span>
-    </div>
-  `;
-
   // Distance this week
   html += `
     <div class="stats-row">
@@ -65,11 +57,12 @@ function renderStatsPage() {
     </div>
   `;
 
-  // Amber found lifetime
+  // Amber found (lifetime + today's pending)
+  const totalAmberDisplay = lifetimeAmberFound + amberFoundToday;
   html += `
     <div class="stats-row">
       <span class="stats-label">Amber Found</span>
-      <span class="stats-value">${lifetimeAmberFound}</span>
+      <span class="stats-value">${totalAmberDisplay}</span>
     </div>
   `;
 
@@ -82,11 +75,7 @@ function renderStatsPage() {
   if (hatchedDinosaurs.length === 0) {
     html += '<div class="no-dinos-msg">No dinosaurs hatched yet. Walk to find amber and start incubating!</div>';
   } else {
-    // Sort by level: Gold > Silver > Bronze
-    const levelOrder = { 'Gold': 1, 'Silver': 2, 'Bronze': 3 };
-    
     hatchedDinosaurs.forEach(dino => {
-      // Determine level from species name
       const level = getDinoLevel(dino.species);
       const levelClass = level.toLowerCase();
       
@@ -101,7 +90,7 @@ function renderStatsPage() {
   }
 
   // Species progress
-  const totalSpecies = 28; // Total species in game
+  const totalSpecies = 28;
   const discoveredSpecies = hatchedDinosaurs.length;
   const progressPercent = Math.round((discoveredSpecies / totalSpecies) * 100);
 
@@ -136,11 +125,8 @@ function formatDistance(metres) {
  * Determine dinosaur level from species name
  */
 function getDinoLevel(species) {
-  // Check against known lists
   if (BRONZE.includes(species)) return 'Bronze';
   if (SILVER.includes(species)) return 'Silver';
   if (GOLD.includes(species)) return 'Gold';
-  
-  // Fallback (shouldn't happen)
   return 'Bronze';
 }
