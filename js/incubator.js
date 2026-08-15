@@ -144,7 +144,7 @@ function startIncubation(amberId) {
   }
   
   // Set hatch distance based on level
-  const hatchDistance = piece.level === 'Gold' ? 10000 : piece.level === 'Silver' ? 5000 : 2000;
+  const hatchDistance = piece.level === 'Gold' ? 10 : piece.level === 'Silver' ? 10 : 10;
   
   // Activate incubator
   emptyIncubator.active = true;
