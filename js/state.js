@@ -27,6 +27,9 @@ async function saveGameState(state) {
   saveValue('lifetimeAmberFound', state.lifetimeAmberFound);
   saveValue('lifetimeDistance', state.lifetimeDistance);
   saveValue('weeklyDistance', state.weeklyDistance);
+  saveValue('welcomeAmberClaimed', state.welcomeAmberClaimed);
+  saveValue('welcomeAmber1Given', state.welcomeAmber1Given);
+  saveValue('welcomeAmber2Given', state.welcomeAmber2Given);
   saveValue('lastDate', state.lastDate);
   saveValue('trailPoints', state.trailPoints);
   saveValue('amberPieces', state.amberPieces);
@@ -43,6 +46,9 @@ async function loadGameState() {
   const lifetimeAmberFound = loadValue('lifetimeAmberFound') || 0;
   const lifetimeDistance = loadValue('lifetimeDistance') || 0;
   const weeklyDistance = loadValue('weeklyDistance') || 0;
+  const welcomeAmberClaimed = loadValue('welcomeAmberClaimed') || false;
+  const welcomeAmber1Given = loadValue('welcomeAmber1Given') || false;
+  const welcomeAmber2Given = loadValue('welcomeAmber2Given') || false;
   const lastDate = loadValue('lastDate') || null;
   const trailPoints = loadValue('trailPoints') || [];
   const amberPieces = loadValue('amberPieces') || [];
@@ -60,6 +66,9 @@ async function loadGameState() {
     lifetimeAmberFound,
     lifetimeDistance,
     weeklyDistance,
+    welcomeAmberClaimed,
+    welcomeAmber1Given,
+    welcomeAmber2Given,
     lastDate,
     trailPoints,
     amberPieces,
@@ -108,6 +117,6 @@ function isNewWeek(lastDateStr) {
 }
 
 function generateAmberThreshold() {
-  const mean = 10;
+  const mean = 600;
   return Math.round(-mean * Math.log(1 - Math.random()));
 }

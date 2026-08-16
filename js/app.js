@@ -1,4 +1,4 @@
-// app.js – Jurassic Walk controller (Stage 3/4 — with stats page)
+// app.js – Jurassic Walk controller (Stage 3/4 — with welcome amber)
 
 let totalDistanceToday = 0;
 let amberFoundToday = 0;
@@ -19,6 +19,9 @@ let incubators = [
 ];
 let hatchedDinosaurs = [];
 let gpsReady = false;
+let welcomeAmberClaimed = false;
+let welcomeAmber1Given = false;
+let welcomeAmber2Given = false;
 
 const SAVE_INTERVAL = 5000;
 
@@ -165,7 +168,20 @@ function handlePositionUpdate(data) {
       }
     });
 
-    // Amber discovery
+    // Welcome amber check (first day only)
+    if (!welcomeAmberClaimed) {
+      if (totalDistanceToday >= 77 && !welcomeAmber1Given) {
+        welcomeAmber1Given = true;
+        giveWelcomeAmber();
+      }
+      if (totalDistanceToday >= 477 && !welcomeAmber2Given) {
+        welcomeAmber2Given = true;
+        welcomeAmberClaimed = true;
+        giveWelcomeAmber();
+      }
+    }
+
+    // Normal amber discovery
     if (distanceSinceLastAmber >= nextAmberThreshold) {
       discoverAmber();
     }
@@ -183,13 +199,26 @@ function discoverAmber() {
   updateAmberDisplay(amberFoundToday);
 
   const piece = createAmberPiece();
-  pendingAmber.push(piece);   // Goes to PENDING, not amberPieces
+  pendingAmber.push(piece);
 
   distanceSinceLastAmber = 0;
   nextAmberThreshold = generateAmberThreshold();
 
   playAmberDiscovery();
   showToast('🟠 Amber found!\n-\nSent to lab for analysis.\n-\nResults announced tomorrow..', 15000);
+
+  saveCurrentState();
+}
+
+function giveWelcomeAmber() {
+  amberFoundToday++;
+  updateAmberDisplay(amberFoundToday);
+
+  const piece = createAmberPiece();
+  pendingAmber.push(piece);
+
+  playAmberDiscovery();
+  showToast('🎁 Welcome gift!\n-\n🟠 Amber found!\n-\nSent to lab. Results tomorrow.', 15000);
 
   saveCurrentState();
 }
@@ -231,28 +260,21 @@ function processLabResults() {
   const today = new Date().toISOString().split('T')[0];
   const newPositives = [];
 
-  // All pending amber from previous days
   const previousPending = pendingAmber.filter(p => p.dateFound < today);
   totalAmberYesterday = previousPending.length;
 
-  // Process each pending piece
   previousPending.forEach(piece => {
     piece.analyzed = true;
     if (piece.hasDNA) {
-      // Move to main amberPieces (visible in incubator)
       amberPieces.push(piece);
       newPositives.push(piece);
     }
-    // Non-DNA pieces are discarded
   });
 
-  // Remove processed pieces from pending
   pendingAmber = pendingAmber.filter(p => p.dateFound >= today);
 
-  // Increment lifetime amber found
   lifetimeAmberFound += totalAmberYesterday;
 
-  // Reset lastSaveTime so first GPS update doesn't immediately re-save
   lastSaveTime = Date.now();
 
   saveCurrentState();
@@ -414,6 +436,9 @@ async function saveCurrentState() {
       lifetimeAmberFound,
       lifetimeDistance,
       weeklyDistance,
+      welcomeAmberClaimed,
+      welcomeAmber1Given,
+      welcomeAmber2Given,
       lastDate: new Date().toISOString(),
       trailPoints: getTrailCoordinates(),
       amberPieces,
@@ -447,6 +472,9 @@ async function loadSavedState() {
       lifetimeAmberFound = gameState.lifetimeAmberFound || 0;
       lifetimeDistance = gameState.lifetimeDistance || 0;
       weeklyDistance = gameState.weeklyDistance || 0;
+      welcomeAmberClaimed = gameState.welcomeAmberClaimed || false;
+      welcomeAmber1Given = gameState.welcomeAmber1Given || false;
+      welcomeAmber2Given = gameState.welcomeAmber2Given || false;
     } else {
       totalDistanceToday = gameState.totalDistanceToday || 0;
       amberFoundToday = gameState.amberFoundToday || 0;
@@ -461,6 +489,9 @@ async function loadSavedState() {
       lifetimeAmberFound = gameState.lifetimeAmberFound || 0;
       lifetimeDistance = gameState.lifetimeDistance || 0;
       weeklyDistance = gameState.weeklyDistance || 0;
+      welcomeAmberClaimed = gameState.welcomeAmberClaimed || false;
+      welcomeAmber1Given = gameState.welcomeAmber1Given || false;
+      welcomeAmber2Given = gameState.welcomeAmber2Given || false;
     }
   } catch (e) {
     totalDistanceToday = 0;
@@ -476,6 +507,9 @@ async function loadSavedState() {
     lifetimeAmberFound = 0;
     lifetimeDistance = 0;
     weeklyDistance = 0;
+    welcomeAmberClaimed = false;
+    welcomeAmber1Given = false;
+    welcomeAmber2Given = false;
   }
 }
 
