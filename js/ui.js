@@ -6,6 +6,8 @@ let pauseIconEl;
 let statusBarEl;
 let statusTextEl;
 let toastEl;
+let topToastEl = null;
+let topToastTimeout = null;
 let startOverlayEl;
 let labModalEl;
 let labContentEl;
@@ -120,6 +122,25 @@ function hideToast() {
   if (!toastEl) return;
   if (toastTimeout) clearTimeout(toastTimeout);
   toastEl.classList.remove('show');
+}
+
+// Top-positioned toast (for use when slide-up menus are open)
+function showTopToast(message, duration = 5000) {
+  // Create top toast element if it doesn't exist
+  if (!topToastEl) {
+    topToastEl = document.createElement('div');
+    topToastEl.id = 'top-toast';
+    document.body.appendChild(topToastEl);
+  }
+  
+  if (topToastTimeout) clearTimeout(topToastTimeout);
+  
+  topToastEl.innerHTML = message.replace(/\n/g, '<br>');
+  topToastEl.classList.add('show');
+  
+  topToastTimeout = setTimeout(() => {
+    topToastEl.classList.remove('show');
+  }, duration);
 }
 
 function updateDistanceDisplay(totalMetres) {

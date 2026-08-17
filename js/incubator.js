@@ -159,8 +159,8 @@ function startIncubation(amberId) {
   // Save state
   saveCurrentState();
   
-  // Show confirmation toast
-  showToast(`🧬 ${piece.level} DNA placed in incubator!\nWalk ${(hatchDistance / 1000).toFixed(0)} km to hatch.`, 5000);
+  // Show confirmation toast (top of screen, visible above menu)
+  showTopToast(`DNA in incubator. Walk ${(hatchDistance / 1000).toFixed(0)} km to hatch.`, 5000);
   
   // Re-render menu
   renderIncubatorMenu();

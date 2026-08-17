@@ -117,6 +117,6 @@ function isNewWeek(lastDateStr) {
 }
 
 function generateAmberThreshold() {
-  const mean = 600;
+  const mean = 10;
   return Math.round(-mean * Math.log(1 - Math.random()));
 }

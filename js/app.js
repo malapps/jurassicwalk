@@ -205,7 +205,7 @@ function discoverAmber() {
   nextAmberThreshold = generateAmberThreshold();
 
   playAmberDiscovery();
-  showToast('🟠 Amber found!\n-\nSent to lab for analysis.\n-\nResults announced tomorrow..', 15000);
+  showToast('🟠 Amber found!\n-\nSent to lab for analysis.\n-\nResults announced tomorrow..', 12000);
 
   saveCurrentState();
 }
@@ -218,7 +218,7 @@ function giveWelcomeAmber() {
   pendingAmber.push(piece);
 
   playAmberDiscovery();
-  showToast('🎁 Welcome gift!\n-\n🟠 Amber found!\n-\nSent to lab. Results tomorrow.', 15000);
+  showToast('🎁 Welcome gift!\n-\n🟠 Amber found!\n-\nSent to lab. Results tomorrow.', 12000);
 
   saveCurrentState();
 }
@@ -404,23 +404,18 @@ function playAmberDiscovery() {
 function startGame() {
   gameActive = true;
   hideStartOverlay();
-
-  if (gpsReady) {
-    showToast('Walk started! 🦕');
-  } else {
-    showToast('Walk started!\nWaiting for GPS signal...', 4000);
-  }
+  // No toast — action is obvious from the UI
 }
 
 function togglePause() {
   if (gameActive) {
     gameActive = false;
     showStartOverlay();
-    showToast('Walk paused');
+    // No toast — overlay appears makes it obvious
   } else {
     gameActive = true;
     hideStartOverlay();
-    showToast('Walk resumed 🦕');
+    // No toast — overlay disappears makes it obvious
   }
 }
 
