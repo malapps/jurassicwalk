@@ -1,22 +1,27 @@
-// sw.js – Service Worker for Jurassic Walk PWA
+// sw.js – Service Worker for Jurassic Walk PWA (Firebase Hosting)
 
-const CACHE_NAME = 'jurassicwalk-v2.0.0';
+const CACHE_NAME = 'jurassicwalk-v3.0.0';
 const ASSETS_TO_CACHE = [
-  '/jurassicwalk/',
-  '/jurassicwalk/index.html',
-  '/jurassicwalk/manifest.json',
-  '/jurassicwalk/css/style.css',
-  '/jurassicwalk/js/state.js',
-  '/jurassicwalk/js/geo.js',
-  '/jurassicwalk/js/map.js',
-  '/jurassicwalk/js/ui.js',
-  '/jurassicwalk/js/incubator.js',
-  '/jurassicwalk/js/app.js',
-  '/jurassicwalk/img/arrow.svg',
-  '/jurassicwalk/icons/icon-192.png',
-  '/jurassicwalk/icons/icon-512.png',
+  '/',
+  '/index.html',
+  '/manifest.json',
+  '/css/style.css',
+  '/js/state.js',
+  '/js/geo.js',
+  '/js/map.js',
+  '/js/ui.js',
+  '/js/incubator.js',
+  '/js/stats.js',
+  '/js/firebase.js',
+  '/js/app.js',
+  '/img/arrow.svg',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
-  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+  'https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js',
+  'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js',
+  'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js'
 ];
 
 // Install event – cache all assets
@@ -92,7 +97,6 @@ self.addEventListener('fetch', (event) => {
           })
           .catch((error) => {
             console.warn('[SW] Fetch failed:', error);
-            // Could return an offline fallback page here
           });
       })
   );
